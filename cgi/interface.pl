@@ -1,18 +1,18 @@
 #!/usr/bin/perl
-# $VERSION = 0.04;
+# interface.pl version 0.06;
 use strict;
 use warnings;
 use CGI::Carp('fatalsToBrowser');
 use CGI::Pretty qw(:standard *table -no_undef_params);
 $CGI::Pretty::INDENT = '    ';
-use PostScript::File        0.13;
-use Finance::Shares::Sample 0.11;
-use Finance::Shares::CGI    0.03;
+use PostScript::File        1.00;
+use Finance::Shares::Sample 0.12;
+use Finance::Shares::CGI    0.11;
 
 ### Parameters
 # Single letter parameters are meta-data, passed as hidden fields
 # other parameters correspond to the layout fields for $table
-my $session   = param('s') || '';	# identifies user and browser settings
+my $user      = param('u') || '';	# identifies user and browser settings
 my $table     = param('t') || '';	# identifier for option, layout and help tables
 my $args      = param('a') || '';	# optional arguments fine-tuning table presentation
 my $choice    = param('c') || '';	# user button
@@ -22,8 +22,14 @@ my @multi_sels= param('x');		# list of multiple-selection scrolling_rows on this
 my $name      = param('name') || '';	# current choice of key field
 #warn "interface.pl table=$table name=$name args=$args choice=$choice\n";
 
+my $db;
 my $w = new Finance::Shares::CGI;
-my $db = $w->get_records($session);
+if (param 'u') {
+    $db = $w->get_records();
+} else {
+    $w->show_error('No user parameter');
+    exit;
+}
 
 ### Globals
 my ($options_name, $layout_name, $help_name);
@@ -82,6 +88,7 @@ if ($choice eq '') {
     if($old and $new) {
 	$data->{name} = $new;
 	$db->sql_replace($options_table, %$data);
+	param('name', $name = $new);
 	update();
     }
 } elsif ($choice eq 'Remove') {
@@ -103,100 +110,127 @@ if ($choice eq '') {
     do_submit();
 } elsif ($choice eq 'Draw chart') {
     do_submit();
-    print redirect( "$w->{base_cgi}/chart.pl?s=$w->{session};name=$name" );
+    print redirect( "$w->{base_cgi}/chart.pl?u=$w->{user};name=$name" );
     exit;
 } elsif ($choice eq 'Run') {
     do_submit();
-    print redirect( "$w->{base_cgi}/run.pl?s=$w->{session};name=$name" );
+    print redirect( "$w->{base_cgi}/run.pl?u=$w->{user};name=$name" );
     exit;
 }
 
-if ($table eq 'Function') {
-    show_function_page();
-} else {
-    show_normal_page();
-}
+### Show page
+$submit_btns = 0;
+@multi_sels = ();
+my $l = $db->select_hash($layout_name, 'where field = ?', 'name');
+my $heading = $l->{heading};
 
-sub show_normal_page {
-    ### Setup
-    $submit_btns = 0;
-    @multi_sels = ();
-    my $l = $db->select_hash($layout_name, 'where field = ?', 'name');
-    my $heading = $l->{heading};
-    
-    $w->print_header($heading);
-    print start_form();
-    #$w->show_params();
-    
-    my ($col1, $col2, $col3) = qw(15% 25% 55%);
-    print start_table ({-width => '95%', -align => 'center'});
+$w->print_header($heading);
+print start_form();
+#$w->show_params();
 
-    ## Initial selection
-    my $prompt  = td({-width => $col1}, h1({-class => 'prompt'}, $heading) );
-    my $maxlen  = $describe->{name}{type};
-    $maxlen =~ s/\w+\((\d+)\)/$1/;
-    my $width   = $db->select_one($layout_name, 'width', 'where field = ?', 'name');
-    my $edit    = td ({-width => $col2}, textfield(-name => 'm_entry', -size => $width, -maxlength => $maxlen,
-			-override => 1) );
-    my $menu    = (!$w->{frames}) ? qq( <a href='$w->{base_cgi}/menu.pl?s=$w->{session}'>Back to menu</a>) : '';
-    my $add     = td ({-width => $col3},
-			submit(-name => 'c', -value => 'Add'),
-			submit(-name => 'c', -value => 'Remove'),   
-			submit(-name => 'c', -value => 'Rename'),
-			submit(-name => 'c', -value => 'Copy'),
-			);
-    print Tr ({-valign => 'middle'}, $prompt, $edit, $add);
+my ($col1, $col2, $col3) = qw(15% 25% 55%);
+print start_table ({-width => '95%', -align => 'center'});
 
-    @keys = ('') unless @keys;
-    my $list    = td({-width => $col2}, @keys ? scrolling_list(-name => 'name', -values => \@keys,
-			-defaults => $name, -size => 9, -override => 1) : '');
-    my $rhs     = td({-width => $col3, -bgcolor => $w->{bgcolor}}, help_text('name') || p(''),);
-    print Tr ({-valign => 'top'}, td({-width => $col1}, ''), $list, $rhs );
-    my $btns    = td(	submit(-name => 'c', -value => 'Choose'),
-			submit(-name => 'c', -value => 'Cancel'),
-			$menu );
-    print Tr ({-valign => 'top'}, td(''), td(''), $btns );
+### Initial selection
+my $prompt  = td({-width => $col1}, h1({-class => 'prompt'}, $heading) );
+my $maxlen  = $describe->{name}{type};
+$maxlen =~ s/\w+\((\d+)\)/$1/;
+my $width   = $db->select_one($layout_name, 'width', 'where field = ?', 'name');
+my $edit    = td ({-width => $col2}, textfield(-name => 'm_entry', -size => $width, -maxlength => $maxlen,
+		    -override => 1) );
+my $fmenu   = (!$w->{frames}) ? qq( <a href='$w->{base_cgi}/menu.pl?u=$w->{user}'>Back to menu</a>) : '';
+my $add     = td ({-width => $col3},
+		    submit(-name => 'c', -value => 'Add'),
+		    submit(-name => 'c', -value => 'Remove'),   
+		    submit(-name => 'c', -value => 'Rename'),
+		    submit(-name => 'c', -value => 'Copy'),
+		    );
+print Tr ({-valign => 'middle'}, $prompt, $edit, $add);
+
+@keys = ('') unless @keys;
+my $list    = td({-width => $col2}, @keys ? scrolling_list(-name => 'name', -values => \@keys,
+		    -defaults => $name, -size => 9, -override => 1) : '');
+my $rhs     = td({-width => $col3, -bgcolor => $w->{bgcolor}}, help_text('name') || p(''),);
+print Tr ({-valign => 'top'}, td({-width => $col1}, ''), $list, $rhs );
+my $btns    = td(	submit(-name => 'c', -value => 'Choose'),
+		    submit(-name => 'c', -value => 'Cancel'),
+		    $fmenu );
+print Tr ({-valign => 'top'}, td(''), td(''), $btns );
+
+### Settings
+my $raw_data = raw_data();
+if ($name and not $raw_data) {
+    print Tr( td({-colspan=>'3'}, hr()) );
+    print Tr( td({-colspan=>'3'}, br(), h1(qq(Settings for '$name'))), td('')); 
+    print Tr( td({-colspan=>'3'}, hr()) );
+    #print Tr( td({-colspan=>'3'}, $w->show_hash($data) ) );
     
-    ## Settings
-    if ($name) {
-	print Tr( td({-colspan=>'3'}, hr()) );
-	print Tr( td({-colspan=>'3'}, br(), h1(qq(Settings for '$name'))), td('')); 
-	print Tr( td({-colspan=>'3'}, hr()) );
-	#print Tr( td({-colspan=>'3'}, $w->show_hash($data) ) );
+    ## Function
+    if ($table eq 'Function') {
+	$l = $db->select_hash($layout_name, 'where field = ?', 'function');
+	my ($values, $labels) = eval_choices($l->{entry_table}, $l->{entry_field}, $l->{entry_extras},
+		    "where type != 'x' and type != 'y'");
+	my $help = help_text('function');
+	print scrolling_row($l->{heading}, 'function', 0, 0, 8, 0, $help, $values, $labels, $data->{function});
+	print Tr ({-valign => 'top'}, td(''), td(''), td(submit(-name => 'c', -value => 'Choose function')));
+	shift @fields;
+	$args = $db->select_one('Funcs::Options', 'type', 'where name = ?', $data->{function}) if $data->{function};
+	print Tr( td({-colspan=>'3'}, hr()) ) if ($args and not $raw_data);
+    }
+
+    ## Show fields
+    if (($table ne 'Function') or ($args and not $raw_data)) {
 	foreach my $field (@fields) {
 	    next if $field eq 'name';
-	    my $l = $db->select_hash($layout_name, 'where field = ?', $field);
-	    if ($l->{levels} =~ /$w->{userlevel}/) {
+	    $l = $db->select_hash($layout_name, 'where field = ?', $field);
+	    if ($l->{levels} =~ /$w->{ulevel}/) {
 		#print Tr( td({-colspan=>'3'}, qq(table='$table', field='$field', cond='$l->{conditions}', args='$args') ) );
 		if ((not $l->{conditions}) or ($l->{conditions} =~ /$args/)) {
 		    my $help = help_text($field);
 		    my $max;
+		    ## Section heading
 		    if ($l->{validation} eq 'section') {
 			print section_row($l->{heading}, $help);
+		    ## Submit buttons
 		    } elsif ($l->{validation} eq 'submit') {
 			print submit_row($l->{entry_table}, $help);
+		    ## Show data
 		    } else {
 			$max = $describe->{$field}{type};
 			$max =~ s/\w+\((\d+)\)/$1/;
 			my $chosen = $data->{$field};
+			## Lookup table
 			if (defined($l->{entry_table})) {
-			    my $query = 'where userid = ?';
-			    $query .= " and not isnull(line_name)" if $table eq 'Draw' and $field eq 'functions';
+			    my ($query, @values);
+			    if ($l->{entry_table} eq 'Funcs') {
+				$query = '';
+			    } elsif (($table eq 'Draw' or $table eq 'Model') and $field eq 'functions') {
+				$query = "where userid = ? and not isnull(line_name)";
+				@values = ( $w->{userid} );
+			    } elsif ($field eq 'line_name') {
+				$query = "where userid = ? and name != '$name'";
+				@values = ( $w->{userid} );
+			    }
 			    my ($values, $labels) = eval_choices($l->{entry_table}, $l->{entry_field}, 
-				$l->{entry_extras}, $query, $w->{userid});
+				$l->{entry_extras}, $query, @values);
+			    ## Multiple selection
 			    if ($l->{validation} eq 'multiple') {
-				print scrolling_row($l->{heading}, $field, 0, 0, 5, 1, $help, $values, $labels, $name,
-					$labels ? undef : $l->{entry_field});
+				print scrolling_row($l->{heading}, $field, 0, 0, 5, 1, $help, $values, $labels,
+				    $name, ($labels ? undef : $l->{entry_field}) );
+			    ## Radio selection
 			    } elsif ($l->{validation} eq 'radio') {
 				print radio_row($l->{heading}, $field, 0, 0, $help, $values, $labels, $chosen, 
 					$labels ? undef : $l->{entry_field});
+			    ## Single selection
 			    } else {
-				print menu_row($l->{heading}, $field, 0, 0, $help, $values, $labels, $chosen, 
-					$labels ? undef : $l->{entry_field});
+				print menu_row($l->{heading}, $field, 0, 0, $help, $values, $labels, $chosen,
+				    $labels ? undef : $l->{entry_field});
 			    }
 			    print Tr( td({-colspan=>'3'}, hr()) );
+			## Checkbox
 			} elsif ($l->{validation} eq 'checkbox') {
 			    print checkbox_row($l->{heading}, $field, $help, $chosen, $l->{entry_field}); 
+			## Text entry
 			} else {
 			    print entry_row($l->{heading}, $field, $l->{width}, $max, $help, $chosen);
 			    print Tr ( td({-colspan=>'3'}, hr()) );
@@ -207,137 +241,24 @@ sub show_normal_page {
 	}
 	print submit_row();
     }
-    
-    ## Finish
-    print end_table;
-    Delete('h');
-    print hidden('t', $table);
-    print hidden('a', $args);
-    print hidden('h', @history);
-    print hidden('x', @multi_sels);
-    print hidden('s', $w->{session});
-    print end_form;
-    print end_html;
 }
+
+## Finish
+print end_table;
+Delete('h');
+print hidden('t', $table);
+print hidden('a', $args);
+print hidden('h', @history);
+print hidden('x', @multi_sels);
+print hidden('u', $w->{user});
+print end_form;
+print end_html;
 
 sub trim {
     my $str = shift;
     $str =~ s/^\s*//;
     $str =~ s/\s*$//;
     return $str;
-}
-
-sub show_function_page {
-    ### Preparation
-    $submit_btns = 0;
-    @multi_sels = ();
-    my $l = $db->select_hash($layout_name, 'where field = ?', 'name');
-    my $heading = $l->{heading};
-   
-    $w->print_header($heading);
-    print start_form();
-    #$w->show_params();
-    
-    my ($col1, $col2, $col3) = qw(15% 25% 55%);
-    print start_table ({-width => '95%', -align => 'center'});
-
-    ## Initial selection
-    my $prompt  = td({-width => $col1}, h1({-class => 'prompt'}, $heading) );
-    my $maxlen  = $describe->{name}{type};
-    $maxlen =~ s/\w+\((\d+)\)/$1/;
-    my $width   = $db->select_one($layout_name, 'width', 'where field = ?', 'name');
-    my $edit    = td ({-width => $col2}, textfield(-name => 'm_entry', -size => $width, -maxlength => $maxlen,
-			-override => 1) );
-    my $menu    = (!$w->{frames}) ? qq( <a href='$w->{base_url}/menu.pl?s=$w->{session}'>Back to menu</a>) : '';
-    my $add     = td ({-width => $col3},
-			submit(-name => 'c', -value => 'Add'),
-			submit(-name => 'c', -value => 'Remove'),   
-			submit(-name => 'c', -value => 'Rename'),
-			submit(-name => 'c', -value => 'Copy'),
-			);
-    print Tr ({-valign => 'middle'}, $prompt, $edit, $add);
-
-    @keys = ('') unless @keys;
-    my $list    = td({-width => $col2}, @keys ? scrolling_list(-name => 'name', -values => \@keys,
-			-defaults => $name, -size => 9, -override => 1) : '');
-    my $rhs     = td({-width => $col3, -bgcolor => $w->{bgcolor}}, help_text('name') || p(''),);
-    print Tr ({-valign => 'top'}, td({-width => $col1}, ''), $list, $rhs );
-    my $btns    = td(	submit(-name => 'c', -value => 'Choose'),
-			submit(-name => 'c', -value => 'Cancel'),
-			$menu );
-    print Tr ({-valign => 'top'}, td(''), td(''), $btns );
-    
-    ## Function selection
-    if ($name and not raw_data()) {
-	print Tr( td({-colspan=>'3'}, hr()) );
-	print Tr( td({-colspan=>'3'}, h1(qq(Settings for '$name')), br()), td("")); 
-	#print Tr( td({-colspan=>'3'}, $w->show_hash($data) ) );
-	$l = $db->select_hash($layout_name, 'where field = ?', 'function');
-	my ($values, $labels) = eval_choices($l->{entry_table}, $l->{entry_field}, $l->{entry_extras},
-				    'where userid = ?', $w->{userid});
-	my $help = help_text('function');
-	print scrolling_row($l->{heading}, 'function', 0, 0, 8, 0, $help, $values, $labels, $data->{function});
-	print Tr ({-valign => 'top'}, td(''), td(''), td(submit(-name => 'c', -value => 'Choose function')));
-	shift @fields;
-	$args = $1 if $data->{function} =~ /_(\w)$/;
-    
-    ## Settings
-	if ($args and not raw_data()) {
-	    print Tr( td({-colspan=>'3'}, hr()) );
-	    foreach my $field (@fields) {
-		next if $field eq 'name';
-		$l = $db->select_hash($layout_name, 'where field = ?', $field);
-		#print Tr( td($field), td({-colspan=>'2'}, $w->show_hash($l) ) );
-		if ($l->{levels} =~ /$w->{userlevel}/) {
-		    if ((not $l->{conditions}) or ($l->{conditions} =~ /$args/)) {
-			my $help = help_text($field);
-			my $max;
-			if ($l->{validation} eq 'section') {
-			    print section_row($l->{heading}, $help);
-			} else {
-			    $max = $describe->{$field}{type};
-			    $max =~ s/\w+\((\d+)\)/$1/;
-			    my $chosen = $data->{$field};
-			    if (defined($l->{entry_table})) {
-				my $query = 'where userid = ?';
-				$query .= qq( and name != '$name') if ($field eq 'line_name');
-				my ($values, $labels) = eval_choices($l->{entry_table}, $l->{entry_field}, 
-				    $l->{entry_extras}, $query, $w->{userid});
-				if ($l->{validation} eq 'multiple') {
-				    print scrolling_row($l->{heading}, $field, 0, 0, 4, 1, $help, $values, $labels,
-					$chosen, ($labels ? undef : $l->{entry_field}) );
-				} elsif ($l->{validation} eq 'radio') {
-				    print radio_row($l->{heading}, $field, 0, 0, $help, $values, $labels, $chosen, 
-					    $labels ? undef : $l->{entry_field});
-				} else {
-				    print menu_row($l->{heading}, $field, 0, 0, $help, $values, $labels, $chosen,
-					$labels ? undef : $l->{entry_field});
-				}
-				print Tr( td({-colspan=>'3'}, hr()) );
-			    } elsif ($l->{validation} eq 'checkbox') {
-				print checkbox_row($l->{heading}, $field, $help, $chosen, $l->{entry_field}); 
-			    } else {
-				print entry_row($l->{heading}, $field, $l->{width}, $max, $help, $chosen);
-				print Tr ( td({-colspan=>'3'}, hr()) );
-			    }
-			}
-		    }
-		}
-	    }
-	    print submit_row();
-	}
-    }
-    
-    ## Finish
-    print end_table;
-    Delete('h');
-    print hidden('t', $table);
-    print hidden('a', $args);
-    print hidden('h', @history);
-    print hidden('x', @multi_sels);
-    print hidden('s',$w->{session});
-    print end_form;
-    print end_html;
 }
 
 sub scrolling_row {
@@ -454,7 +375,7 @@ sub submit_row {
     foreach my $text (@$ar) {
 	$buttons .= submit(-name => 'c', -value => $text);
     }
-    ($help = <<end_help) =~ s/^\s+//gm if ($w->{helplevel} == 1) and (not $help);
+    ($help = <<end_help) =~ s/^\s+//gm if ($w->{hlevel} == 1) and (not $help);
 	<p>Press <span class='btn'>&nbsp;Submit&nbsp;</span> to store your choices,
 	or <span class='btn'>&nbsp;Cancel&nbsp;</span> to return without changing anything.</p>
 end_help
@@ -507,15 +428,15 @@ sub help_text {
     my $field = shift;
     my ($help1, $help2, $help3) = $db->select_one($help_name, 'help1, help2, help3', 'where field = ?', $field);
     $help1 = '' unless defined $help1;
-    if ($w->{helplevel} == 1) {
+    if ($w->{hlevel} == 1) {
 	return $help1;
-    } elsif ($w->{helplevel} == 2) {
+    } elsif ($w->{hlevel} == 2) {
 	if ($help2) {
 	    return $help2;
 	} else {
 	    return $help1;
 	}
-    } elsif ($w->{helplevel} == 3) {
+    } elsif ($w->{hlevel} == 3) {
 	if ($help3) {
 	    return $help3;
 	} elsif ($help2) {
@@ -545,26 +466,32 @@ sub init_globals {
 sub do_submit {
     my $new_data = 0;
     foreach my $field (@multi_sels) {
-	$db->delete("${table}::$field", 'userid = ? and name = ?', $w->{userid}, $name);
+	eval {
+	    $db->delete("${table}::$field", 'userid = ? and name = ?', $w->{userid}, $name);
+	};
+	if ($@) {
+	    die "$@\n" unless $@ =~ /table is missing/;
+	}
     }
     foreach my $param (param()) {
 	if (length($param) > 2) {
 	    my @value = param($param);
 	    # cannot just look at number of values as multi_sels can return 1 value
-	    my $found = 0;
+	    my $found = -1;
 	    if (@multi_sels) {
+		$found = 0;
 		foreach my $field (@multi_sels) {
 		    $found = 1, last if ($field eq $param);
 		}
 	    }
-	    if ($found) {
+	    if ($found > 0) {
 		my %hash = ( userid => $w->{userid}, name => $name );
 		for( my $i=0; $i < @value; $i++ ) {
 		    $hash{value} = ($value[$i] eq '') ? undef : $value[$i];
 		    $db->replace("${table}::$param", %hash);
 		}
 		undef $data->{$param};
-	    } else {
+	    } elsif ($found < 0) {
 		my $val = $value[0];
 		$val =~ s/^\s<.*>\s$//;	    # don't store 'extras'
 		$val =~ s/^\s+//;	    # strip outside spaces
@@ -575,8 +502,13 @@ sub do_submit {
 	    Delete($param);
 	}
     }
-    if ($table eq 'Function' and $data->{function} =~ /_x$/) {
-	$data->{graph} = ($data->{function} eq 'volume_x') ? 'volumes' : 'prices';
+    if (raw_data()) {
+	my $type = $db->select_one('Funcs::Options', 'type', 'where name = ?', $data->{function});
+	if ($type eq 'x') {
+	    $data->{graph} = 'prices';
+	} elsif ($type eq 'y') {
+	    $data->{graph} = 'volumes';
+	}
     }
     $data->{userid} = $w->{userid};
     $db->replace("${table}::Options", %$data ) if $new_data;
@@ -591,6 +523,9 @@ sub go_back {
 }
 
 sub raw_data {
-    return ($table eq 'Function' and $data->{function} and $data->{function} =~ /_[xy]$/);
+    return 0 unless $table eq 'Function';
+    return 0 unless $data->{function};
+    my $type = $db->select_one('Funcs::Options', 'type', 'where name = ?', $data->{function});
+    return $type =~ /[xy]/;
 }
 

@@ -1,6 +1,7 @@
 
+=head1 NAME
 
-=head1 NAME Finance::Shares::CGI - support for Finance::Shares cgi interface scripts
+Finance::Shares::CGI - support for Finance::Shares cgi interface scripts
 
 =head1 SYNOPSIS
 
@@ -9,7 +10,7 @@
     use Finance::Shares::CGI;
 
     my $cgi = new Finance::Shares::CGI;
-    my $db  = $cgi->get_records( param('s') );
+    my $db  = $cgi->get_records();
 
     $cgi->print_header($title, $text, $script, $style);
     $cgi->print_form_start($url, $code, $centered);
@@ -27,29 +28,18 @@
     list.pl
     drop.pl
 
-=head2 User registration scripts
-
-    register.pl
-    email.pl
-    password.pl
-    login.pl
-    logout.pl
-
 =head2 Main processing scripts
 
-    browser.pl
     chart.pl
     interface.pl
     menu.pl
-    options.pl
+    shares.pl
     prefs.pl
     run.pl
 
 =head2 Support scripts
 
-    make_cmdline
     make_index
-    strip_cgi
 
 =head1 DESCRIPTION
 
@@ -60,26 +50,99 @@ L<Finance::Shares::MySQL> for details on setting this up.
 The scripts must be manually copied to your CGI directory.  See the README file for installation details.  This
 documents how the scripts work together.
 
-=head2 Administration scripts
+=head2 Constructor
 
-These scripts are only available to an admin user.
+There are no parameters.  However, there are seven lines that probably need editing before use.  See the README
+file for INSTALLATION details.  Use as:
+
+    my $cgi = new Finance::Shares::CGI;
+
+=head2 Methods
+
+=head3 login()
+
+Connects to the database.  Used by B<get_records>.
+
+=head3 get_records()
+
+This requires the CGI parameter 'u' to be set to a user name.  It will automatically register any name it does not
+recognize.  The user settings are fetched and available for use.  Use as:
+
+    use Finance::Shares::CGI;
+    use CGI ':standard';
+
+    my $cgi = new Finance::Shares::CGI;
+    param('u', 'myname');
+    $cgi->get_records();
+    
+=head3 change_user()
+
+Call this to store any changes to the user data.
+
+=head3 print_header( [title [, text [, script [, style]]]] )
+
+Issue the CGI text needed to set up a standardized page.  The C<title> becomes a heading as well as the HTML page
+title.  If C<text> is present it is output and subsequent text will be part of a table.  C<script> and C<style> would typically
+be javascript code and the name of a CSS stylesheet.  The default is no script and F<styles.css>.  Use as:
+
+    $cgi->print_header('My Title', $html);
+
+=head3 print_form_start( [url [, code [, centered]]] )
+
+Declare the start of a form after B<print_header>.  C<url> is the form action, C<code> is 'onsubmit' code and
+C<centered> is a layout flag.  Use as:
+
+    $cgi->print_form_start();
+
+=head3 print_form_end()
+
+Mark the end of a form declared with B<print_form_start>.
+
+=head3 print_footer( [text] )
+
+Mark the end of the page begun with B<print_header>.
+
+=head3 show_error( message )
+
+Output an error page and exit.  Use as:
+
+    $cgi->show_error( 'No user' );
+
+=head2 Support methods
+
+=head3 show_hash( hashref )
+
+Return a string comprising key=value pairs for the top level entries only.  Use as:
+
+    print $cgi->show_hash( $h );
+
+=head3 show_records( [table] )
+
+Print out the objects key/value pairs within table html if C<table> is true.
+
+head2 Administration scripts
+
+Choose 'Admin' from the 'User levels' Preference menu.  An additional menu then gives access to these scripts.
 
 =over 4
 
 =item init.pl
 
-Builds the mysql database.
-Mysql must have a user, password and database to match those set in MarketMonkey.pm.  Documentation is
+Builds the mysql database and maintains the user interface support tables.
+Mysql must have a user, password and database to match those set in Finance::Shares::CGI.pm.  Documentation is
 available using
 
     $ perldoc init.pl
 
-Note that tables, users or sessions arguments all destroy user data.
+Note that C<tables> or C<users> options destroy user data.
+
+This script may be invoked directly from a browser, provided that '?initialize=1' is appended.  It will then
+initialize the database ready for the other CGI scripts.
 
 =item fetch.pl
 
-Fetches stock quotes into the mysql database.  Remember the command line scripts F<fs_fetch> and F<fs_fetch_csv>
-can be found in the Finance::Shares package.
+Fetches stock quotes into the mysql database.  Quotes are fetched when a chart or model is run, anyway.  Remember
+the command line scripts F<fs_fetch> and F<fs_fetch_csv> can be found in the Finance::Shares package.
 
 =item list.pl
 
@@ -94,41 +157,13 @@ them.  This does the same job as F<fs_drop_table> from the Finance::Shares packa
 
 =back
 
-=head2 User registration scripts
-
-I realise this is a bit heavy handed for a demo, but I haven't got around to taking it out yet.
-
-=over 4
-
-=item register.pl
-
-Starts registration process for new user.  Emails a link to password.pl
-
-=item email.pl
-
-Emails user name and password hint to user.
-
-=item password.pl
-
-Completes registration.
-
-=item login.pl
-
-Checks for user id and starts a session.
-
-=item logout.pl
-
-Ends a session.  Sessions may also expire; logging in is required daily.
-
-=back
-
 =head2 Main processing scripts
 
 These are the scripts which serve the site's main purpose, to make the hundreds of options more manageable.
 
 =over 4
 
-=item options.pl
+=item shares.pl
 
 Top of site, this generates the frameset holding menu and content frames.
 
@@ -140,11 +175,6 @@ Generates the menu according to session browser settings
 
 The main script, driven by params 't' (table name), 'a' (arguments) and 'name' (of user settings) which determine
 the layout described in the init.pl tables.
-
-=item browser.pl
-
-User override of browser settings.  There is support for dhtml but it is currently disabled.  (It wasn't worth the
-bother.)
 
 =item prefs.pl
 
@@ -165,52 +195,9 @@ Runs a model and returns a chart with the results.
 
 =over 4
 
-=item make_cmdline
-
-This creates a user called 'cmdline' with the password 'cmdL193'.  It also creates a session with id
-'cmdline' - a lot easier to type than a 32 character digest.  This needs to be given each day as the session
-expires, but it does make command line testing possible.
-
-You will probably want to copy the F<strip_cgi> script to your cgi directory before issuing manual commands like:
-
-    run.pl 's=cmdline' 'name=model1' | strip_cgi > outfile.ps
-
-The first time you try this there will probably be a write error, because run.pl and chart.pl write a file F<vars>
-which is probably not owned by you.  Delete it and try again.
-
-This F<vars> file can be used as a basis for manual tests.  I find it simplest to get test data from CSV files, so
-a C<source> line needs manually adding to each sample:
-
-  'samples' => {
-    'ulvr1' => {
-      'source' => 't/08-ulvr.csv',	# Added manually
-      'symbol' => 'ULVR.L',
-      'end_date' => '2002-08-31',
-      'dates_by' => 'days',
-      'userid' => '-1',
-      'name' => 'ulvr1',
-      'start_date' => '2002-06-01'
-    }
-  },
-
-Occasionally a C<1;> needs adding on the end as the file is read by C<do>.  If the changed F<vars> file is now saved
-as F<test1.txt>, the following command should produce the same result:
-
-    run.pl 'test_in=test1.txt' | strip_cgi > outfile.ps
-
-The main difference is that this test mode avoids any mysql accesses, so can be used for installation tests before
-the database is set up.
-
 =item make_index
 
 Constructs the file F<index.html> using the same settings as all the cgi scripts.
-
-=item strip_cgi
-
-A filter converting script output to a viewable (PostScript or HTML) file.
-
-The HTML written to STDOUT by the scripts have a CGI header prepended.  Piping the output through strip_cgi
-produces a file which can be saved and viewed with a postscript viewer such as gv or KGhostView.
 
 =back
 

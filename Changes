@@ -1,5 +1,33 @@
 Revision history for Perl extension Finance::Shares::CGI.
 
+0.06	Mon May 19 11:56:33 GMT 2003
+	all scripts: removed session management, now by user
+	shares.pl now parent frame instead of options.pl
+	removed all scripts concerned with security/sessions
+	init.pl:
+	    removed sessions table
+	    user table completely different
+	    now has seperate table for Funcs (was embedded list)
+	    minor changes to layouts and prompts
+	    improved cgi interface
+	interface.pl:
+	    merged show_normal_page and show_function_page
+	    compatable with Finance::Shares::Sample functions again
+	menu.pl:
+	    simplified menu structure
+	    added admin menu to normal
+	    removed selectable headings
+	    added 'fetch' mode
+	prefs.pl
+	    removed references to help levels (although still in code)
+	list.pl
+	    added row count
+	remove cmdline tests from CPAN install
+
+0.05	May 7th 2003
+	Refactored all scripts to handle changes to Finance::Shares v0.04
+	Added support for cmdline tests
+
 0.01  Sat Apr 12 08:23:43 2003
 	- original version; created by h2xs 1.22 with options
 		-X -n Finance::Shares::CGI

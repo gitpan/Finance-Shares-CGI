@@ -1,24 +1,31 @@
 #!/usr/bin/perl
-# $VERSION = 0.02;
+# prefs.pl version 0.03;
 use strict;
 use warnings;
 use CGI::Carp('fatalsToBrowser');
 use CGI::Pretty qw(:standard *table -no_undef_params);
 $CGI::Pretty::INDENT = '    ';
-use Finance::Shares::CGI 0.03;
+use Finance::Shares::CGI 0.11;
 
+my $db;
 my $w = new Finance::Shares::CGI;
-my $db = $w->login();
-$w->get_records( param('s') );  # $urec and $srec 
+if (param 'u') {
+    $db = $w->get_records();
+} else {
+    $w->show_error('No user parameter');
+    exit;
+}
 
 my $choice = param('choice') || '';
-my $userlevel = $w->{userlevel};
-my $helplevel = $w->{helplevel};
 
 if ($choice eq 'Save') {
-    $userlevel = param('userlevel');
-    $helplevel = param('helplevel');
-    $w->change_user( userlevel => $userlevel, helplevel => $helplevel );
+    $w->change_user( 
+	ulevel => param('ulevel') || $w->{ulevel},
+	hlevel => param('hlevel') || $w->{hlevel},
+	admin  => param('admin')  || $w->{admin},
+	css    => param('css')    || $w->{css},
+	frames => param('frames') || $w->{frames},
+    );
     show_ok();
 } elsif ($choice eq 'Cancel') {
     show_cancel();
@@ -36,16 +43,13 @@ end_heading
     $w->print_header('User & help levels', $heading);
     $w->print_form_start();
 
-    my $user_input;
-    if ($w->{userlevel} < 4) {
-	$user_input = radio_group(-name => 'userlevel', -default => $userlevel, -linebreak => 'true',
+    my $user_input = radio_group(-name => 'ulevel', -default => $w->{ulevel}, -linebreak => 'true',
 	    -values => [1,2,3], -labels => { 1 => 'Beginner', 2 => 'Intermediate', 3 => 'Specialist' });
-    } else {
-	$user_input = radio_group(-name => 'userlevel', -default => $userlevel, -linebreak => 'true',
-	    -values => [1,2,3,4], -labels => { 1 => 'Beginner', 2 => 'Intermediate', 3 => 'Specialist', 4 => 'Admin' });
-    }
-    my $help_input = radio_group(-name => 'helplevel', -default => $helplevel, -linebreak => 'true',
+    
+    my $help_input = radio_group(-name => 'hlevel', -default => $w->{hlevel}, -linebreak => 'true',
 	-values => [1,2,3], -labels => { 1 => 'Simple', 2 => 'Brief', 3 => 'Detailed' });
+    
+    my $admin_input  = checkbox(-name => 'admin',  -checked => $w->{admin},  -value => 1, -label => 'Admin');
     
     my ($col1, $col2) = ('25%', '75%');
     my $html;
@@ -68,14 +72,10 @@ end_heading
 	<tr><td colspan='2'><hr></td></tr>
 	<tr>
 	    <td width='$col1'>
-		$help_input
+		$admin_input
 	    </td>
 	    <td width='$col2'>
-		<p>This second group controls the help text next to each option.  If you haven't used this model
-		before, <b>Simple</b> would be best.</p>
-		<p>Alternative help texts are provided where it is useful.  If you are already familiar with the
-		model, <b>Brief</b> help may be all you need.  The <b>Detailed</b> setting provides more technical
-		information, often referring to the underlying software.</p>
+		<p>This adds more menu options, mainly about maintaining the database.</p>
 	    </td>
 	</tr>
 	<tr><td colspan='2'><hr></td></tr>
@@ -87,13 +87,7 @@ end_heading
 	    </td>
 	</tr>
     </table>
-    <script language='javascript'>
-	var bwidth = 0;
-	if (screen.width) bwidth = 0.9 * screen.width;
-	if (window.innerWidth) bwidth = 0.95 * window.innerWidth;
-	document.writeln("<input type='hidden' name='width' value=" + bwidth + ">");
-    </script>
-    <input type='hidden' name='s' value='$w->{session}'>
+    <input type='hidden' name='u' value='$w->{user}'>
 end_html
     print $html;
 
@@ -105,12 +99,9 @@ sub show_ok {
     my $heading;
     ($heading = <<end_heading) =~ s/^\s+//gm;
     <p>Your settings have been saved and will take effect when the page is reloaded.  If this doesn't happen
-    automatically, <a href='$w->{base_cgi}/options.pl?s=$w->{session}' target='_top'>click here</a> or press the <span class='btn'>&nbsp;Reload&nbsp;</span> button on
+    automatically, <a href='$w->{base_cgi}/shares.pl?u=$w->{user}' target='_top'>click here</a> or press the <span class='btn'>&nbsp;Reload&nbsp;</span> button on
     your browser.</p>
 end_heading
-#    <script language='javascript'>
-#	top.location='$w->{base_cgi}/options.pl?s=$w->{session}';
-#    </script>
     $w->print_header('Preferences', $heading);
     $w->print_footer();
 }
@@ -124,4 +115,18 @@ end_heading
     $w->print_footer();
 }
 
+__END__
+	<tr>
+	    <td width='$col1'>
+		$help_input
+	    </td>
+	    <td width='$col2'>
+		<p>This second group controls the help text next to each option.  If you haven't used this model
+		before, <b>Simple</b> would be best.</p>
+		<p>Alternative help texts are provided where it is useful.  If you are already familiar with the
+		model, <b>Brief</b> help may be all you need.  The <b>Detailed</b> setting provides more technical
+		information, often referring to the underlying software.</p>
+	    </td>
+	</tr>
+	<tr><td colspan='2'><hr></td></tr>
 

@@ -1,22 +1,23 @@
 #!/usr/bin/perl
-# $VERSION = 0.04;
+# run.pl version 0.03;
 use strict;
 use warnings;
 use Carp;
 use CGI::Carp('fatalsToBrowser');
 use CGI::Pretty qw(:standard *table -no_undef_params);
 $CGI::Pretty::INDENT = '    ';
-use Finance::Shares::CGI      0.03;
+use Finance::Shares::CGI      0.11;
 use Data::Dumper;
-use PostScript::Graph::Style  0.08;
-use Finance::Shares::Sample   0.11 qw(&function %line);
+use PostScript::Graph::Style  1.00;
+use Finance::Shares::Sample   0.12 qw(&call_function %function %functype);
 use Finance::Shares::Averages 0.11;
 use Finance::Shares::Bands    0.12;
+use Finance::Shares::Momentum 0.02;
 use Finance::Shares::Chart    0.12;
 use Finance::Shares::Model    0.10;
 
 ### Globals
-our ($db, $name, $session);
+our ($db, $name);
 our $query = 'where userid = ? and name = ?';
 our $testfile = param('test_in');
 our %data_graph = (
@@ -24,48 +25,69 @@ our %data_graph = (
     'y' => 'volumes',
 );
 
-
 ### Main program
-our $c = new Finance::Shares::CGI;
+our $w = new Finance::Shares::CGI;
 if ($testfile) {
     # The $Testing file should define:
-    #   $name, $c->{userlevel}	# from 'vars' with "source => <csv_file>," added to sample(s)
-    #   $c->{options}		#
+    #   $name, $w->{ulevel}	# from 'vars' with "source => <csv_file>," added to sample(s)
+    #   $w->{options}		#
     #   1;			# 'do' must return true
     do $testfile or die "Unable to read $testfile";
 } else {
-    $session = param('s') || '';		# identifies user and browser settings
-    $db = $c->get_records($session);
+    if (param 'u') {
+	$db = $w->get_records();
+    } else {
+	$w->show_error('No user parameter');
+	exit;
+    }
     $name = param('name');
 
-    $c->{sql} = new Finance::Shares::MySQL {
-	database => $c->{database},
-	user     => $c->{user},
-	password => $c->{password},
+    $w->{sql} = new Finance::Shares::MySQL {
+	database => $w->{database},
+	user     => $w->{dbuser},
+	password => $w->{password},
     };
 }
 croak 'No name' unless $name;
-my $h = fetch_hash('Draw', 'draws', $name);
-show_error("No Draw data found for $name.") unless $h;
+my $h = fetch_hash('Model', 'models', $name);
+show_error("No Model data found for $name.") unless $h;
 
-my $sh = process_sample($h, 'sample');
-show_error("No Sample data found for $h->{sample}.") unless $sh;
-my $sample = new Finance::Shares::Sample( $sh );
+my @samples   = fetch_multiple('Model', 'samples', $name);
+my @tests     = fetch_multiple('Model', 'tests', $name);
+my @functions = fetch_multiple('Model', 'functions', $name);
+my $chart     = process_chart($h, 'chart');
+my $pf        = new PostScript::File( $chart->{file} );
+my $fsm       = new Finance::Shares::Model(
+    verbose => 3,
+    run     => 0,
+);
 
-$c->{functions} = fetch_multiple('Draw', 'functions', 'Function', 'chosen_fns', $name);
-foreach my $h (values %{$c->{functions}}) {
-    process_function( $sample, $h->{name} );
+my $pages = 0;
+foreach my $sname (@samples) {
+    my $sh  = process_sample($sname);
+    my $fss = new Finance::Shares::Sample( $sh );
+    $fsm->add_sample( $fss );
+    
+    foreach my $fname (@functions) {
+	process_function( $fss, $fname );
+    }
+    
+    foreach my $tname (@tests) {
+	my $h = process_test( $fsm, $fss, $tname );
+	$h = {} unless defined $h;
+	$fsm->test(%$h);
+    }
+
+    $chart = {} unless defined $chart;
+    my $ch = new Finance::Shares::Chart( %$chart, sample => $fss, file => $pf );
+    $pf->newpage() if $pages++;
+    $ch->build_chart($pf);
 }
-
-my $ch = process_chart($h, 'chart');
-dump_vars($c, 'vars', [$name, $c->{userlevel}, $c->{options}],
-    ['$name', '$c->{userlevel}', '$c->{options}']) unless $testfile;
-
-$ch->{sample} = $sample;
-my $chart = new Finance::Shares::Chart( $ch );
 print header ('application/postscript');
-print $chart->output();
+print $pf->output();
 
+dump_vars($w, 'vars', [$name, $w->{ulevel}, $w->{multiple}, $w->{options}],
+    ['$name', '$w->{ulevel}', '$w->{multiple}', '$w->{options}']) unless $testfile;
 
 sub show_error {
     my $error = shift || '';
@@ -73,20 +95,20 @@ sub show_error {
     ($html = <<end_html) =~ s/^\s+//gm;
     <p>There is a problem creating this graph. $error You could try:</p>
     <ul>
-    <li>Choose alternative <a href='$c->{base_cgi}/chart.pl?s=$c->{session};name=$name'>Function chart</a>
+    <li>Choose alternative <a href='$w->{base_cgi}/interface.pl?s=$w->{user};name=$name'>Model</a>
     settings.</li>
-    <li>Try <a href='$c->{base_cgi}/menu.pl?s=$c->{session};t=!cache;a=offline' target='menu'>Work offline</a> from the menu.</li>
-    <li>Report the problem to <a href='mailto:$c->{webmaster}'>$c->{webmaster}</a>.</li>
+    <li>Try <a href='$w->{base_cgi}/menu.pl?s=$w->{user};t=!cache;a=offline' target='menu'>Work offline</a> from the menu.</li>
+    <li>Report the problem to <a href='mailto:$w->{webmaster}'>$w->{webmaster}</a>.</li>
     </ul>
 end_html
-    $c->print_header('No graph', $html);
-    $c->print_footer();
+    $w->print_header('No graph', $html);
+    $w->print_footer();
     warn "No graph settings for '$name'";
     exit;
 }
 
 sub dump_vars {
-    my ($c, $filename, $cbjects, $names) = @_;
+    my ($w, $filename, $cbjects, $names) = @_;
 
     $Data::Dumper::Indent = 1;
     open FILE, '>', $filename or die "Unable to write to $filename : $!";
@@ -95,7 +117,7 @@ sub dump_vars {
     warn "$filename saved";
 }
 # call as 
-# $cgi->dump_vars('temp', [$arg1, $arg2], [qw(arg1 arg2)] );
+# $w->dump_vars('temp', [$arg1, $arg2], [qw(arg1 arg2)] );
 
 sub get_color {
     my $str = shift;
@@ -107,12 +129,12 @@ sub fetch_hash {
     my $h;
     
     if (defined $name) {
-	my $d = $c->{options};
+	my $d = $w->{options};
 	if ($testfile) {
 	    $h = $d->{$data}{$name};
 	} else {
-	    $h = $c->{db}->select_hash("${table}::Options", $query, $c->{userid}, $name);
-	    $d->{$data}{$name} = { %$h };
+	    $h = $w->{db}->select_hash("${table}::Options", $query, $w->{userid}, $name);
+	    $d->{$data}{$name} = { %$h } if defined $h;
 	}
     }
 
@@ -120,32 +142,26 @@ sub fetch_hash {
 }
 
 sub fetch_multiple {
-    my ($table1, $field, $table2, $data, $name) = @_;
-    my $res = {};
-    my $d = $c->{options};
+    my ($table1, $field, $name) = @_;
+    my $d = $w->{multiple};
+    
     if ($testfile) {
-	$res = $d->{$data}{$name};
+	return @{$d->{$table1}{$field}{$name}};
     } else {
-	my @choices = map { $_ = $_->[0] } $c->{db}->select("${table1}::${field}", 'value', $query, $c->{userid}, $name);
-	if (@choices) {
-	    foreach my $ch (@choices) {
-		$res->{$ch} = $c->{db}->select_hash("${table2}::Options", $query, $c->{userid}, $ch);
-	    }
-	}
-	$d->{$data}{$name} = $res;
+	my @choices = map { $_ = $_->[0] } $w->{db}->select("${table1}::${field}", 'value', $query, $w->{userid}, $name);
+	$d->{$table1}{$field}{$name} = [ @choices ];
+	return @choices;
     }
-	
-    return $res;
 }
 
+
 sub process_sample {
-    my ($parent, $key) = @_;
-    my $name = $parent->{$key};
+    my ($name) = @_;
     return undef unless defined $name;
     my $h = fetch_hash('Sample', 'samples', $name);
     
-    $h->{source} = $c->{sql} unless defined $h->{source};
-    $h->{mode}   = $c->{cache};
+    $h->{source} = $w->{sql} unless defined $h->{source};
+    $h->{mode}   = $w->{cache};
     delete $h->{name}; # 'name' means stock name to Sample
     delete $h->{userid};
     
@@ -157,8 +173,8 @@ sub process_function {
     my $h = fetch_hash('Function', 'functions', $name);
     $h->{line} = undef;
     $h->{key} = $name;
-    my ($line, $type);
-    ($line, $type) = ($h->{function} =~ /^(\w+)_(\w)$/);
+    my $line = $db->select_one('Funcs::Options', 'function', 'where name = ?', $h->{function});
+    my $type = $db->select_one('Funcs::Options', 'type', 'where name = ?', $h->{function});
     my $graph = $data_graph{$type};
     if ($graph) {
 	$h->{graph} = $graph;
@@ -170,7 +186,13 @@ sub process_function {
     $h->{graph} = $graph unless defined $h->{graph};
     $h->{line}  = $line  unless defined $h->{line};
     $h->{style} = process_style($h, 'style') if $h->{style} and not ref($h->{style});
-    $h->{line}  = function(\%line, $h->{function}, $sample, %$h);
+    my $func = $db->select_one('Funcs::Options', 'function', 'where name = ?', $h->{function});
+    my ($line1, $line2) = call_function(\%function, $func, $sample, %$h);
+    if (defined $line2) {
+	$h->{line} = $h->{edge} ? $line1 : $line2;
+    } else {
+	$h->{line} = $line1;
+    }
     return ($h->{graph}, $h->{line});
 }
 # Note the first parameter is a Finance::Shares::Sample object, not a hash
@@ -178,9 +200,16 @@ sub process_function {
 sub process_style {
     my ($parent, $key) = @_;
     my $name = $parent->{$key};
+    return undef unless defined $name;
     my $h    = fetch_hash('Style', 'styles', $name);
     my $seq  = process_sequence($h, 'sequence');
     my ($line, $point, $bar);
+
+    unless (defined $h->{display}) {
+	$h->{display} = 0;
+	$h->{display} |= 1 if defined $h->{line};
+	$h->{display} |= 2 if defined $h->{point};
+    }
 
     if ($h->{display} & 1) {
 	my $width = $h->{width} ? $h->{width} : 1;
@@ -228,8 +257,8 @@ sub process_sequence {
     my $seq;
 
     if (defined $name) {
-	$c->{seq}{$name} = new PostScript::Graph::Sequence unless $c->{seq}{$name};
-	$seq = $c->{seq}{$name};
+	$w->{seq}{$name} = new PostScript::Graph::Sequence unless $w->{seq}{$name};
+	$seq = $w->{seq}{$name};
 	
 	my $sh = fetch_hash('Sequence', 'sequences', $name);
 	my ($k, $v);
@@ -240,7 +269,6 @@ sub process_sequence {
 	       $v =~ s/,//g;
 	       my @list = eval "qw($v)";
 	       $seq->auto( @list ) if @list;
-	       #warn "auto: ", join(',',@list);
 	   } else {
 	       my @list;
 	       if ($k eq 'shape') {
@@ -249,7 +277,6 @@ sub process_sequence {
 	       }
 	       @list = eval $v;
 	       $seq->setup( $k, \@list ) if @list;
-	       #warn "setup: $k = $v [", join(',',@list) if $k eq 'shape';
 	   }
 	}
     }
@@ -257,6 +284,40 @@ sub process_sequence {
     return $seq;
 }
 # Note this returns a PostScript::Graph::Sequence object, not a hash
+
+sub process_test {
+    my ($model, $sample, $name) = @_;
+    return undef unless defined $name;
+    my $h = fetch_hash('Test', 'tests', $name);
+    
+    $h->{key} = $name;
+    ($h->{graph1}, $h->{line1}) = process_function( $sample, $h->{line1_name} );
+    ($h->{graph2}, $h->{line2}) = process_function( $sample, $h->{line2_name} ) if $h->{line2_name};
+    $h->{graph}  = 'signals';
+    $h->{style}  = process_style($h, 'style');
+    my @signames = fetch_multiple('Test', 'signals', $name);
+    my %sigs;
+    foreach my $sig (@signames) {
+	my $signal = process_signal($model, $sample, $sig);
+	$sigs{$signal}++;
+    }
+    $h->{signals} = [ keys %sigs ];
+    
+    return $h;
+}
+
+sub process_signal {
+    my ($model, $sample, $name) = @_;
+    return undef unless defined $name;
+    my $h = fetch_hash('Signal', 'signals', $name);
+    warn "name=$name, h=", $w->show_hash($h);
+    
+    ($h->{graph}, $h->{line}) = process_function($sample, $h->{line_name}) if $h->{line_name} and not defined $h->{value};
+    $h->{style}  = process_style($h, 'style');
+    $model->add_signal($name, $h->{signal}, undef, $h); 
+
+    return $name;
+}
 
 sub process_chart {
     my ($parent, $key) = @_;
@@ -270,7 +331,7 @@ sub process_chart {
     $h->{volumes} = process_graph($h, 'volumes');
     $h->{cycles}  = process_graph($h, 'cycles');
     $h->{signals} = process_graph($h, 'signals');
-    if ($c->{userlevel} == 1) {
+    if ($w->{ulevel} == 1) {
 	$h->{prices}{percent}  = $h->{prices_pc}  if defined $h->{prices_pc};
 	$h->{volumes}{percent} = $h->{volumes_pc} if defined $h->{volumes_pc};
 	$h->{cycles}{percent}  = $h->{cycles_pc}  if defined $h->{cycles_pc};
@@ -297,15 +358,16 @@ sub process_graph {
     $h->{y_axis}   = process_axis($h, 'y_axis');
     if ($key eq 'prices') {
 	my $ph = $h->{points} = {};
-	$ph->{pshape} = $h->{pshape};
-	$ph->{pi_color} = get_color($h->{pi_color});
-	$ph->{po_color} = get_color($h->{po_color});
-	$ph->{po_width} = $h->{po_width};
+	$ph->{shape} = $h->{pshape} if defined $h->{pshape};
+	$ph->{width} = $h->{pwidth} if defined $h->{pwidth};
+	$ph->{inner_color} = get_color($h->{pi_color}) if defined $h->{pi_color};
+	$ph->{outer_color} = get_color($h->{po_color}) if defined $h->{po_color};
+	$ph->{outer_width} = $h->{po_width} if defined $h->{po_width};
     } elsif ($key eq 'volumes') {
 	my $vh = $h->{bars} = {};
-	$vh->{bi_color} = get_color($h->{bi_color});
-	$vh->{bo_color} = get_color($h->{bo_color});
-	$vh->{bo_width} = $h->{bo_width};
+	$vh->{inner_color} = get_color($h->{bi_color}) if defined $h->{bi_color};
+	$vh->{outer_color} = get_color($h->{bo_color}) if defined $h->{bo_color};
+	$vh->{outer_width} = $h->{bo_width} if defined $h->{bo_width};
     }
 
     return $h;

@@ -1,27 +1,40 @@
 #!/usr/bin/perl
-# $VERSION = 0.02;
+# shares.pl version 0.03;
 use strict;
 use warnings;
 use CGI::Carp('fatalsToBrowser');
 use CGI::Pretty qw(:standard *table -no_undef_params);
 $CGI::Pretty::INDENT = '    ';
-use Finance::Shares::CGI 0.03;
+use Finance::Shares::CGI 0.11;
+
+my $w = new Finance::Shares::CGI;
+if (param 'u') {
+    $w->get_records();
+} else {
+    $w->show_error('No user parameter');
+    exit;
+}
+
+# record settings from index.html
+if (defined param('frames')) {
+    $w->{frames} = param('frames') || 0;
+    $w->{css}    = param('css')    || 0;
+    $w->{layers} = param('layers') || 0;
+    $w->{dhtml}  = param('dhtml')  || 0;
+}
+$w->change_user();
 
 my $html;
-my $w = new Finance::Shares::CGI;
-$w->get_records( param('s') );
 my $content = param('content') || 'interface';
 my $table   = param('t') || 'Model';
 my $args    = param('a')  || '';
 
-$content = 'list', $table = '' if $w->{userlevel} == 4;
-my $main = "$w->{base_cgi}/$content.pl?s=$w->{session};t=$table;a=$args";
+$content = 'list', $table = '' if $w->{ulevel} == 4;
+my $main = "$w->{base_cgi}/$content.pl?u=$w->{user};t=$table;a=$args";
 
 if ($w->{frames}) {
     my ($col1, $col2);
-    if ($w->{userlevel} == 1) {
-	($col1, $col2) = ('17%', '83%');
-    } elsif ($w->{dhtml}) {
+    if ($w->{ulevel} == 1) {
 	($col1, $col2) = ('17%', '83%');
     } else {
 	($col1, $col2) = ('17%', '83%');
@@ -33,7 +46,7 @@ if ($w->{frames}) {
 	    <base href='$w->{base_url}/'>
 	</head>
 	<frameset name='main' cols="$col1,$col2">
-	    <frame name='menu' src='$w->{base_cgi}/menu.pl?s=$w->{session}'>
+	    <frame name='menu' src='$w->{base_cgi}/menu.pl?u=$w->{user}'>
 	    <frame name='content' src='$main'>
 	</frameset>
 	<noframes>
@@ -43,12 +56,12 @@ if ($w->{frames}) {
 		Please <a href='mailto:webmaster\@willmot.org.uk'>email me</a> if you come
 		across something that doesn't work.</p>
 		<p>If this page does not automatically redirect you,
-		click <a href='$w->{base_cgi}/menu.pl?s=$w->{session}'>here</a> for the main menu.</p>
+		click <a href='$w->{base_cgi}/menu.pl?u=$w->{user}'>here</a> for the main menu.</p>
 	    </body>
 	</noframes>
 	</html>
 END_HTML
     print $html;
 } else {
-    print redirect "$w->{base_cgi}/menu.pl?s=$w->{session}";
+    print redirect "$w->{base_cgi}/menu.pl?u=$w->{user}";
 }

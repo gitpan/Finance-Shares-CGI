@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $VERSION = 0.07;
+# init.pl version 0.09;
 use strict;
 use warnings;
 use Pod::Usage;
@@ -7,27 +7,49 @@ use CGI::Carp('fatalsToBrowser');
 use CGI::Pretty qw(:standard *table -no_undef_params escapeHTML);
 $CGI::Pretty::INDENT = '    ';
 use DBIx::Namespace      0.03;
-use Finance::Shares::CGI 0.03;
+use Finance::Shares::CGI 0.11;
 
 ### CGI interface
 my $w = new Finance::Shares::CGI;
-my $db = $w->get_records('initialize');
+my $db;
+if (param('initialize')) {
+    $db = $w->login();
+} else {
+    if (param 'u') {
+	$db = $w->get_records();
+    } else {
+	$w->show_error('No user parameter');
+	exit;
+    }
+}
 my $choice = param('choice');
-my $title = 'Reset Tables';
-unless ($choice) {
+my $title  = 'Reset Tables';
+my $list   = 0;
+if ($choice eq 'List') {
+    $list = 1;
+} elsif (not $choice) {
     $w->print_header($title,'');
     $w->print_form_start();
-    print p(q(<b>WARNING</b> Choosing 'sessions', 'users' or 'tables' will destroy user's data.));
-    print checkbox(-name => 'list');
-    print checkbox(-name => 'sessions');
+    print q(<p class='left'>Click 'List' to see the table names.<br>);
+    print submit(-name => 'choice', -value => 'List');
+    print '</p>';
+    print q(<p class='left'><b>WARNING</b> Choosing 'users' or 'tables' will destroy user's data.<br>);
     print checkbox(-name => 'users');
+    print '<br>';
     print checkbox(-name => 'tables');
+    print '</p>';
     print checkbox(-name => 'layouts');
+    print '<br>';
     print checkbox(-name => 'prompts');
+    print '<br>';
+    print q(<p class='left'>Check 'all' or enter space seperated table names.<br>);
     print checkbox(-name => 'all');
+    print '<br>';
     print textfield(-name => 'names', -size => 50);
+    print '</p>';
     print submit(-name => 'choice', -value => 'Ok');
-    print hidden(-name => 's', -value => $w->{session});
+    print hidden(-name => 'u', -value => $w->{user});
+    print hidden(-name => 'initialize', -value => 1) if param('initialize');
     $w->print_form_end();
     $w->print_footer();
     exit;
@@ -50,7 +72,7 @@ my $layout_fields = [qw(field posn width levels conditions heading validation
 
 =head1 NAME
 
-init.pl - setup mysql tables for Finance::Shares web interface
+sql_init - setup mysql tables for Finance::Shares web interface
 
 =head1 SYNOPSIS
 
@@ -181,33 +203,20 @@ be given, without harming any user data:
 my $hlp      = defined(param('help'))     || 0;
 my $man      = defined(param('man'))      || 0;
 my $all      = defined(param('all'))      || 0;
-my $list     = defined(param('list'))     || 0;
 my $newusers = defined(param('users'))    || 0;
-my $sessions = defined(param('sessions')) || 0;
 my $layouts  = defined(param('layouts'))  || 0;
 my $prompts  = defined(param('prompts'))  || 0;
 my $tables   = defined(param('tables'))   || 0;
 @ARGV = split(/[ ,]+/, param('names'));
-pod2usage(-verbose => 2) if ($man);
-pod2usage(-verbose => 1) if ($hlp);
-pod2usage(-verbose => 1) unless ($list or $all or @ARGV or $newusers or $sessions);
 $all = 1 if $list;
 
 my %ch;
 foreach my $table (@ARGV) { $ch{$table}++; }
 
-### Log onto mysql
-#my $db = new DBIx::Namespace(
-#    user     => $user,
-#    password => $password,
-#    database => $database,
-#) unless $list;
-
-warn "sessions = $sessions";
-if (($sessions or $newusers) and $db) {
+### Create user table
+if (($newusers) and $db) {
     eval {
-	users_create() and print "user table re-created\n" if $newusers;
-	sessions_create() and print "session table re-created\n";
+	users_create() and print "user table re-created\n";
     exit unless ($list or $all or @ARGV);
     };
     if ($@) {
@@ -686,6 +695,41 @@ q(<p>) . color3() . q(</p>)],
 create($name, $mysql, $layout, $mapping, $help);
 }
 
+### Funcs
+if ($all or $ch{Funcs}) {
+$name = 'Funcs';
+## mysql
+$mysql = [
+#'field----------,k,'type'---,max,default,aux
+['name'          ,1,'VARCHAR', 20],
+['function'      ,0,'VARCHAR', 20],
+['type'          ,0,'CHAR'   ,  1],
+];
+## layout
+$layout = [
+#'name'---------------,'function'-----------,'type'
+['Opening price'      ,'open'               ,'x'],
+['Highest price'      ,'high'               ,'x'],
+['Lowest price'       ,'low'                ,'x'],
+['Closing price'      ,'close'              ,'x'],
+['Volume'             ,'volume'             ,'y'],
+['Value'              ,'value'              ,'l'],
+['Simple average'     ,'simple_average'     ,'a'],
+['Weighted average'   ,'weighted_average'   ,'a'],
+['Exponential average','exponential_average','a'],
+['Envelope'           ,'envelope',          ,'e'],
+['Bollinger band'     ,'bollinger_band'     ,'b'],
+['Highest/lowest'     ,'channel'            ,'c'],
+['Momentum'           ,'momentum'           ,'m'],
+['Rate of change'     ,'ratio'              ,'m'],
+['Gradient'           ,'gradient'           ,'m'],
+];
+## help
+$help = [
+];
+create($name, $mysql, $layout, $mapping, $help);
+}
+
 ### Function
 if ($all or $ch{Function}) {
 $name = 'Function';
@@ -696,10 +740,9 @@ $mysql = [
 ['function'      ,0,'VARCHAR', 20],
 ['graph'         ,0,'VARCHAR', 20],
 ['line_name'     ,0,'VARCHAR', 20],
-['price'         ,0,'FLOAT'  , 10],
-['volume'        ,0,'FLOAT'  , 10],
-['period'        ,0,'FLOAT'  , 10],
+['value'         ,0,'FLOAT'  , 10],
 ['percent'       ,0,'FLOAT'  , 10],
+['period'        ,0,'FLOAT'  , 10],
 ['edge'          ,0,'TINYINT',  1],
 ['strict'        ,0,'TINYINT',  1, 0],
 ['shown'         ,0,'TINYINT',  1, 1],
@@ -710,23 +753,18 @@ $mysql = [
 $layout = [
 #'field'---------,sq,wi,'lvl','cnd','heading'-------,'validation'---,'table','entry','extras','args'
 ['name'          , 0,16,'123',''   ,'Functions'     ,'.*'            ],
-['function'      , 1,16,'123',''   ,'Function'      ,''             ,
-'[qw(value_p value_v simple_a weighted_a expo_a env_e boll_b chan_c)]',
-'{value_p => "Price level", value_v => "Volume level",
-  simple_a => "Simple average", weighted_a => "Weighted average", expo_a => "Exponential average",
-  env_e => "Envelope", boll_b => "Bollinger band", chan_c => "Highest/lowest",}'],
-['graph'         , 2, 0,'   ','lta','Graph'         ,'radio'        ,'[qw(prices volumes cycles signals)]',
+['function'      , 1,16,'123',''   ,'Function'      ,''             ,'Funcs','name'],
+['graph'         , 2, 0,'   ','lam','Graph'         ,'radio'        ,'[qw(prices volumes cycles signals)]',
 			'{prices => "Prices", volumes => "Volumes", cycles => "Cycles", signals => "Signals"}'],
-['line_name'     , 3,16,'123','aebc','Source line'   ,''             ,'Function','name'],
+['line_name'     , 3,16,'123','aebcm','Source line'   ,''             ,'Function','name'],
 ['edge'          , 4,16,'123','ebc','Edge'          ,'radio'        ,'[1,0]',
 			'{1 => "Upper bound", 0 => "Lower bound"}'], 
-['price'         , 5, 6,'123','p'  ,'Price'         ,'^[0-9.]*$'    ],
-['volume'        , 6,12,'123','v'  ,'Volume'        ,'^[0-9.]*$'    ],
-['period'        , 7, 6,'123','ac' ,'Period'        ,'^[0-9.]*$'    ],
+['value'         , 5, 6,'123','l'  ,'Value'         ,'^[0-9.]*$'    ],
+['period'        , 7, 6,'123','acm','Period'        ,'^[0-9.]*$'    ],
 ['percent'       , 8, 6,'123','e'  ,'Percent'       ,'^[0-9.]*$'    ],
 ['strict'        ,10,16,' 23','aebc','Strict'       ,'radio'        ,'[1,0]','{1 => "Yes", 0 => "No"}'], 
-['shown'         ,11,16,'  3','avpebc','Visible'    ,'radio'        ,'[1,0]','{1 => "Yes", 0 => "No"}'], 
-['style'         ,12,16,'123','avpebc','Style'      ,''             ,'Style','name','default'],
+['shown'         ,11,16,'  3','almebc','Visible'    ,'radio'        ,'[1,0]','{1 => "Yes", 0 => "No"}'], 
+['style'         ,12,16,'123','almebc','Style'      ,''             ,'Style','name','default'],
 ];
 ## help
 $help = [
@@ -745,10 +783,8 @@ q()],
 q(<p>The line type you have chosen needs another line to work on. ) . menu('Central line') . q(</p>)],
 ['edge',
 q(<p>This function produces a band around the central line.  Which line do you want to use?</p>)],
-['price',
-q(<p>Please enter the price you want to use as a comparison.</p>)],
-['volume',
-q(<p>Please enter the volume you want to use as a comparison.</p>)],
+['value',
+q(<p>Please enter an appropriate number for the graph.</p>)],
 ['period',
 q(<p>This will normally be a number of days.</p>)],
 ['percent',
@@ -783,6 +819,7 @@ $mysql = [
 ['right_margin'  ,0,'FLOAT'  ,  5],
 ['y_axis'        ,0,'VARCHAR', 20],
 ['pshape'        ,0,'VARCHAR', 12],
+['pwidth'        ,0,'FLOAT'  ,  5],
 ['pi_color'      ,0,'VARCHAR', 18],
 ['po_color'      ,0,'VARCHAR', 18],
 ['po_width'      ,0,'FLOAT'  ,  5],
@@ -807,6 +844,7 @@ $layout = [
 ['pshape'        ,10,18,'123','p'  ,'Shape'         ,''             ,'[qw(stock2 stock close2 close)]',
     q({stock => "Day's spread (simple)", stock2 => "Day's spread (outlined)",
     close => "Closing price (simple)", close2 => "Closing price (outlined)"}), 'default'], 
+['pwidth'        ,11, 6,' 23','p'  ,'Width'         ,'^[0-9.]*$'    ],
 ['pi_color'      ,12,18,' 23','p'  ,'Color'         ,'^[][0-9., ]*$'],
 ['po_color'      ,13,18,'  3','p'  ,'Outline color' ,'^[][0-9., ]*$'],
 ['po_width'      ,14, 6,'  3','p'  ,'Outline width' ,'^[0-9.]*$'    ],
@@ -848,12 +886,10 @@ q(<p>What shape do you want the price mark to be?  The ) . code('Day\'s spread')
 and closing prices marked on a line between lowest and highest prices for the day.</p> <p>Normally, all
 marks on the graph have an outline, but the ) . code('(simple)') . q( marks are only drawn once.  They don't look
 as good but for a lot of prices they will be displayed faster and make a smaller file.</p>)],
+['pwidth',
+q(<p>This is the width of the line used for the price mark.</p>)],
 ['pi_color',
 q(<p>What colour would you like the price marks? ) . color1() . q(</p>)],
-['pi_width',
-q(<p>How wide should the price lines be? ) . width1() . q(</p>),
-q(<p>Price line width. ) . width2() . q(</p>),
-q(<p>Price line width. ) . width3() . q(</p>)],
 ['po_color',
 q(<p>The outer color can be set here, overriding the ) . button('Outline') . q( Chart setting. ) . color3()
 . q(</p>)],
@@ -1028,12 +1064,12 @@ $mysql = [
 ## layout
 $layout = [
 #'field'---------,sq,wi,'lvl','cnd','heading'-------,'validation'---,'table','entry','extras','args'
-['name'          , 0,16,'123',''   ,'Samples'        ,'.*'            ],
+['name'          , 0,16,'123',''   ,'Samples'       ,'.*'            ],
 ['symbol'        , 1,12,'123',''   ,'Stock symbol'  ,'.*'           ],
 ['start_date'    , 7,12,'123',''   ,'Start date'    ,'^\d\d\d\d.\d\d.\d\d$'],
 ['end_date'      , 8,12,'123',''   ,'End date'      ,'^\d\d\d\d.\d\d.\d\d$'],
-['dates_by'      , 6, 0,' 23',''   ,'Compare over'  ,''             ,'[qw(days weeks months)]',
-			'{days => "Trading days", weeks => "Weeks", months => "Months"}' ],
+['dates_by'      , 6, 0,' 23',''   ,'Dates by'      ,''             ,'[qw(quotes weekdays days weeks months)]',
+    '{days => "All days", weeks => "Weeks", months => "Months", quotes => "Quotes", weekdays => "Week days"}' ],
 ];
 ## help
 $help = [
@@ -1051,7 +1087,7 @@ q(<p>This must be recognized by ) . yahoo() . q(, usually in the format ) .
 q(<p>What is the last date you want to test?</p>)],
 ['dates_by',
 q(<p>What timescale do you want? If the test is to be done over a lengthy period, it would be better to set this
-to ) . code('Weeks') . q( or even ) .  code('Months') . q(.  Otherwise ) . code('Trading days') . q( should be
+to ) . code('Weeks') . q( or even ) .  code('Months') . q(.  Otherwise ) . code('Week days') . q( should be
 fine.</p>),
 q(<p>The timescale.</p>),
 q(<p>This determines the number and frequency of values tested.  The default ) . code('Trading days') . q(is just
@@ -1158,8 +1194,8 @@ $mysql = [
 $layout = [
 #'field'---------,sq,wi,'lvl','cnd','heading'-------,'validation'---,'table','entry','extras','args'
 ['name'          , 0,16,'123',''   ,'Signals'        ,'.*'            ],
-['signal'        , 1,16,'123',''   ,'Signal'         ,'radio'        ,'[qw(mark_buy mark_sell)]',
-	'{mark_buy => "Buy point", mark_sell => "Sell point"}'],
+['signal'        , 1,16,'123',''   ,'Signal'         ,'radio'        ,'[qw(mark mark_buy mark_sell)]',
+	'{mark => "Highlight", mark_buy => "Buy point", mark_sell => "Sell point"}'],
 ['graph'         , 2, 0,'  3',''   ,'Graph'          ,'radio'        ,'[qw(prices volumes cycles signals)]',
 			'{prices => "Prices", volumes => "Volumes", cycles => "Cycles", signals => "Signals"}'],
 ['value'         , 3, 6,'  3',''   ,'Value'          ,'^[0-9.]*$'    ],
@@ -1171,8 +1207,8 @@ $help = [
 ['name',
 "<p>A <b>Signal</b> is something that happens when a test passes.</p>". intro('sample'),],
 ['signal',
-"<p>These are the only two signals that will show on a chart.  See the Finance::Shares::Model module for other
-signals available.</p>"],
+"<p>". code('Buy point'). " marks with an up arrow, ". code('Sell point'). " is a down arrow, while a circle marks
+the ". code('Highlight'). " signal.  See the Finance::Shares::Model module for other signals available.</p>"],
 ['graph',
 "<p>If a ". menu('Value') ." is provided, this should indicate what type of value it is.</p>"],
 ['value',
@@ -1400,37 +1436,20 @@ create($name, $mysql, $layout, $mapping, $help);
 print "</pre>";
 print end_html();
 
-sub sessions_create {
-    my $uname = 'Login::Sessions';
-    
-    my $fields = '';
-    $fields .= "session char(32) not null, ";
-    $fields .= "userid int(4) not null, ";
-    $fields .= "ts timestamp default null, ";
-    $fields .= "cache enum ('online', 'cache', 'offline' ) default 'online', ";
-    $fields .= "bwidth int(4) default 0, ";
-    $fields .= "frames tinyint(1) default 0, ";
-    $fields .= "css tinyint(1) default 0, ";
-    $fields .= "layers tinyint(1) default 0, ";
-    $fields .= "dhtml tinyint(1) default 0, ";
-    $fields .= "primary key(session)";
-    return $db->create($uname, $fields);
-}
-
 sub users_create {
     my $uname = 'Login::Users';
     
     my $fields = '';
-    $fields .= "login char(20) not null unique, ";
+    $fields .= "user char(20) not null unique, ";
     $fields .= "userid int(4) not null auto_increment, ";
-    $fields .= "pwd char(32) not null, ";
-    $fields .= "hint char(32) default '', ",
-    $fields .= "email char(40) not null, ";
-    $fields .= "ts timestamp default null, ";
-    $fields .= "userlevel tinyint(1) default 1, ";
-    $fields .= "helplevel tinyint(1) default 1, ";
+    $fields .= "ulevel tinyint(1) default 1, ";
+    $fields .= "hlevel tinyint(1) default 1, ";
+    $fields .= "admin tinyint(1) default 0, ";
+    $fields .= "cache enum ('online', 'fetch', 'cache', 'offline' ) default 'cache', ";
+    $fields .= "frames tinyint(1) default 0, ";
+    $fields .= "css tinyint(1) default 0, ";
     $fields .= "primary key(userid)";
-    return $db->create($uname, $fields);
+     return $db->create($uname, $fields);
 }
 
 sub mysql_create {
@@ -1561,14 +1580,31 @@ sub create {
     eval {
 	print "'$name' : ";
 	mysql_create("${name}::Options", $m) and print 'table ' if $tables;
-	layout_create("${name}::Layout", $l) and print 'layout ' if $layouts;
-	help_create("${name}::Help", $h) and print 'prompt ' if $prompts;
+	if ($name eq 'Funcs') {
+	    fill_funcs($l) and print '(filled) ' if $tables;
+	} else {
+	    layout_create("${name}::Layout", $l) and print 'layout ' if $layouts;
+	    help_create("${name}::Help", $h) and print 'prompt ' if $prompts;
+	}
 	print "\n";
     };
     if ($@) {
 	print "\n$@\n";
 	exit;
     }
+}
+
+sub fill_funcs {
+    my $data = shift;
+    foreach my $row (@$data) {
+	my ($name, $function, $type) = @$row;
+	$db->replace("Funcs::Options", 
+	    name     => $name,
+	    function => $function,
+	    type     => $type,
+	);
+    }
+    1;
 }
 
 ### Helper functions

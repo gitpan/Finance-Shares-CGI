@@ -1,0 +1,86 @@
+p {
+    font-style: italic;
+}
+
+p.left {
+    font-style: normal;
+}
+
+p.centered {
+    font-style: normal;
+    text-align: center;
+}
+
+.prompt {
+    font-family: sans-serif;
+    font-style: normal;
+    font-weight: bold;
+}
+
+.btn {
+    background: #0077aa;
+    color: #e8e8e8;
+    font-family: monospace;
+    font-style: normal;
+    font-weight: bold;
+}
+
+.code {
+    color: #895000;
+    font-family: monospace;
+    font-style: normal;
+    font-weight: bold;
+}
+
+b {
+    color: #bb0022;
+}
+
+a:link {
+    background: #eef8ff;
+    color: #002c75;
+}
+
+a:active {
+    background: #fff8ff;
+    color: #65cbff;
+}
+
+a:visited {
+    background: #dde8ee;
+    color: #799daf;
+}
+
+a:hover.item {
+    background: #fff8ff;
+    color: #895000;
+}
+
+.head {
+    font-weight: bold;
+    color: #895000;
+}
+
+a:link.isel {
+    color: #2991b7;
+    font-weight: bold;
+}
+
+a:hover.isel {
+    background: #fff8ff;
+    color: #895000;
+    font-weight: bold;
+}
+
+a:active.isel {
+    background: #fff8ff;
+    color: #000000;
+    font-weight: bold;
+}
+
+a:visited.isel {
+    color: #00293a;
+    font-weight: bold;
+}
+
+

@@ -1,10 +1,16 @@
 Finance::Shares::CGI
 ====================
 
-This package provides a CGI interface to the Finance::Shares
-toolkit.  It comprises a number of scripts and a support
-module.  Note that installation requires some manual steps
-as well as the normal make commands.
+This package provides a CGI interface to the Finance::Shares toolkit.  It
+comprises a number of scripts and a support module.  Note that installation
+requires some manual steps as well as the normal make commands.
+
+!!! CAUTION !!!
+
+This is a demo only.  It is possible to send the cgi process into an infinite
+loop, so DON'T put it on a public http server.  This interface necessitates late
+binding of functions and tests but no checking is made for circular references
+because they are not possible from the scripts.  
 
 
 INSTALLATION
@@ -25,111 +31,105 @@ STEP 1: Edit the CGI.pm file to tailor it to your system
 	    webmaster => 'webmaster@willmot.org.uk',
 	    ## === edit these END ===
 	    
-The user, password and database are best left as they are
-for the first trial as they match the settings used in the
-Finance::Shares::Overview instructions.
+The user, password and database are best left as they are for the first trial as
+they match the settings used in the Finance::Shares::Overview instructions.
 
 base_cgi
-    Root part of the URL used to access the cgi scripts from
-    a browser.  I've been using cgi-bin because cgi-perl is
-    a pain to develop with, but it works ok with either.
+    Root part of the URL used to access the cgi scripts from a browser.  I've
+    been using cgi-bin because cgi-perl is a pain to develop with, but it works
+    ok with either.
 
 base_url
-    Root part of the URL used to access the normal html
-    documents.
+    Root part of the URL used to access the normal html documents.
 
 base_dir
-    This should be the path to the directory holding the
-    normal html documents. index.html will be written here.
+    This should be the path to the directory holding the normal html documents.
+    index.html will be written here.
 
 webmaster
-    I would be grateful if you would change this if it goes
-    onto a live site!
+    I would be grateful if you would change this if it goes onto a live site!
 
 
-STEP 2:  The usual incantation may now be made
+STEP 2:  Install module
+
+The usual incantation may now be made to install the module.  'make test' is
+trivial and tells you nothing useful.
 
     perl Makefile.PL
     make
-    make test
     make install
 
 
 STEP 3:  Copy the files
 
-Now you have decided where the files will go, copy
-all the *.pl into your cgi directory and all the files in
-html/ to your html directory.  
+Now you have decided where the files will go, copy all the files in the cgi
+directory into your working cgi directory (e.g. the one known to apache as cgi-bin,
+cgi-perl).
 
-From the package directory give the command 'make_index'
-which should write the index.html file to your html
-directory.
+Copy all the files in html/ to your html directory.  
 
 
-STEP 4: Initialize the database
+STEP 4: Make index.html
 
-The rest of the installation is carried out from your brower
-and email program.  Enter the following url into your
-brower:
+From the package directory give the command 'make_index' which should write the
+index.html file to your html directory.  [Note that this needs access to CGI.pm,
+if you are doing things differently.]
+
+
+STEP 5: Initialize the database
+
+The rest of the installation is carried out from your brower.  Enter a URL
+similar to this one.  [I have my development version in the 'shares'
+subdirectory of the apache server on hawk.home.net.]
 
     http://hawk.home.net/cgi-bin/shares/init.pl?initialize=1
 
-Choose 'list' if you're curious, or everything else
-(sessions, users, tables, layouts, prompts, all) to
-initialize the database.  There is no need to enter any
-table names when 'all' is checked.
+Choose 'list' if you're curious, or everything else (users, tables, layouts,
+prompts, all) to initialize the database.  
+
+[If you already have data in the database, it will mostly remain untouched.
+However, if you have been using a previous version of Finance::Shares::CGI, any
+user information (choices, login etc) will be lost.]
 
 
-STEP 5: Register as a user
+STEP 6: Register as a user
 
-[Sorry: the user registration is a leftover from a test
-site.  The session concept is quite deeply embedded and
-I haven't got around to removing it.]
-
-a)  Type in the site url, e.g.
+a)  Type in the url for index.html, e.g.
 
 	http://hawk.home.net/shares/index.html
 
-b)  From 'Login', choose 'register here', fill in the form
-    and wait for the email to arrive.
+b)  Choose a login.  Your settings will be saved under that name.
 
-c)  Follow the emailed link to choose a password.
-
-Now the site is available for normal use.
 
 
 NOTES
 =====
-    
-If it goes wrong you might have to delete the database and
-re-create it before trying again.  At one point the
-initialization only worked on an empty database, although
-now adding ';initialize=1' should override that.
 
-To recreate the database 'test'...
-    mysql> drop database test;
-    mysql> create database test;
-Then from your brower, try again
-    http://hawk.home.net/cgi-bin/shares/init.pl?initialize=1
+To administer the database, enable the 'admin' option from 'User levels' on the
+menu.
 
-When registration has sent an email, the user and session
-tables can be checked by
-    mysql> select * from t2;
-    mysql> select * from t3;
+There is no utility for removing names from the database, so don't add more than
+you need.  Resetting with the 'Initialize tables' option is the only
+possibility.
 
-An admin account is obtained by manually adding ';admin=4'
-onto the end of the link emailed during registration.
+There is probably some residual support for text-only browsers, but I haven't
+tested it since taking out the DHTML stuff.
 
-The scripts can be run from the command line by giving the
-command 'make_cmdline' first.  It is probably simplest to
-use the web interface to set up the options, remembering the
-name of the top level 'Draw chart' or 'Run model' settings.
+This is likely to be the last version I produce of a CGI interface for
+Finance::Shares.  My interest lies in developing a script toolkit, and this is
+too peripheral. - Chris Willmot
 
-You will probably want to copy the 'strip_cgi' script to
-your cgi directory before issuing manual commands like:
 
-    run.pl 's=cmdline' 'name=model1' | strip_cgi > outfile.ps
 
-See Finance::Shares::CGI for further details.
+COPYRIGHT AND LICENCE
+=====================
 
+Copyright (C) 2002, 2003 Christopher P Willmot.  All rights reserved.
+
+This work is published under the same terms as Perl itself.  The Perl
+distribution may be found at http://www.perl.org.  
+
+There is no warranty whatsoever.  Use at your own risk.  Just because it is here
+and is documented does not mean that it is fit for any purpose implied by the
+code or accompanying documentation.  
 

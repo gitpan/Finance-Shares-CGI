@@ -1,19 +1,39 @@
 #!/usr/bin/perl
-# $VERSION = 0.03;
+# make_index version 0.04;
 use strict;
 use warnings;
 use CGI::Carp('fatalsToBrowser');
 use CGI::Pretty qw(:standard *table -no_undef_params);
 $CGI::Pretty::INDENT = '    ';
-use Finance::Shares::CGI 0.03;
+use Finance::Shares::CGI 0.11;
 
 my $w = new Finance::Shares::CGI;
-$w->width();
 my $file = "$w->{base_dir}/index.html";
 open OUTFILE, '>', $file or die $!;
 select OUTFILE;
 
-my $form_start = start_form(-action => "$w->{base_cgi}/login.pl");
+my $script;
+($script = <<end_script) =~ s/^\s+//gm;
+    function set_vars() {
+	var frames = 1;
+	var css = 1;
+	
+	if (screen.width) bwidth = 0.9 * screen.width;
+	if (window.innerWidth) bwidth = 0.95 * window.innerWidth;
+
+	browserVersion = parseInt(navigator.appVersion);
+	if ((navigator.appName.indexOf('Netscape') != -1) && (browserVersion == 4)) {
+	    frames = 1; css=1;
+	} else {
+	    frames = 1;
+	}
+	document.forms[0].frames.value=frames;
+	document.forms[0].css.value=css;
+    }
+end_script
+
+my $form_start = start_form(-action => "$w->{base_cgi}/shares.pl");
+my $user_name = textfield(-name => 'u', -maxlength => '20');
 my $enter = submit(-name => 'choice', -value => 'Enter');
 my $form_end = end_form();
 my $intro;
@@ -22,13 +42,20 @@ my $intro;
     quotes along with functions and test results.</p>
     <p class='centered'>An internet connection is required although an
     offline mode allows for analysing previously fetched quotes.</p>
+    <p class = 'centered'>In order to keep track of your Models, you need to identify yourself.  There is no
+    security, but your choices will be stored under the user name you give so you may access it again.</p>
     $form_start
+    <p class = 'centered'><b>Please enter a user name</b></p>
+    <p class = 'centered'>$user_name</p>
     <p class = 'centered'>$enter</p>
+    <input type='hidden' name='frames' value='99'>
+    <input type='hidden' name='css' value='99'>
     $form_end
+    <script language='javascript'>set_vars()</script>
     <p align='center'>Although this might give a taste of what the Finance::Shares modules are about, they were intended to be
     used as a scripting toolbox comprising the following.  See their man pages for further details.</p>
 end_intro
-$w->print_header(undef,$intro);
+$w->print_header(undef, $intro, $script);
 
 my $html;
 ($html = <<end_html) =~ s/^\s+//gm;
@@ -63,8 +90,8 @@ my $html;
 	    Finance::Shares::Portfolio
 	</td>
 	<td>
-	    Another top level module.  This uses the Model's buy/sell signals to maintain stock positions.  <i>Not
-	    implemented yet.</i>
+	    <i>[Proposed.]</i> Another top level module.  This uses the Model's buy/sell signals to maintain stock
+	    positions.
 	</td>
     </tr>
     <tr>
@@ -125,7 +152,7 @@ my $html;
 	    Finance::Shares::Momentum
 	</td>
 	<td>
-	    Functions for identifying over-bought and over-sold conditions.  <i>Not implemented yet.</i>
+	    Functions for identifying over-bought and over-sold conditions by looking at the rate prices change.
 	</td>
     </tr>
     <tr>
@@ -141,7 +168,7 @@ my $html;
 	    Finance::Shares::Trends
 	</td>
 	<td>
-	    This gives an indication of rising and falling trends.
+	    <i>[Under development.]</i> This gives an indication of rising and falling trends.
 	</td>
     </tr>
     </table>

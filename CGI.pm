@@ -1,26 +1,27 @@
 package Finance::Shares::CGI;
-our $VERSION = 0.03;
+our $VERSION = 0.11;
 use strict;
 use warnings;
 use CGI::Carp('fatalsToBrowser');
 use CGI::Pretty qw(:standard *table -no_undef_params);
 $CGI::Pretty::INDENT = '    ';
-use Finance::Shares::MySQL 1.03;
+use Finance::Shares::MySQL 1.04;
+
 
 our $query = 'where userid = ? and name = ?';
 our @raw_data = (
-    { name => 'Opening price', function => 'open_x',   graph => 'prices' },
-    { name => 'Highest price', function => 'high_x',   graph => 'prices' },
-    { name => 'Lowest price',  function => 'low_x',    graph => 'prices' },
-    { name => 'Closing price', function => 'close_x',  graph => 'prices' },
-    { name => 'Volume',        function => 'volume_y', graph => 'volumes' },
+    { name => 'Opening price', function => 'Opening price',   graph => 'prices' },
+    { name => 'Highest price', function => 'Opening price',   graph => 'prices' },
+    { name => 'Lowest price',  function => 'Lowest price',    graph => 'prices' },
+    { name => 'Closing price', function => 'Closing price',   graph => 'prices' },
+    { name => 'Volume',        function => 'Volume',          graph => 'volumes' },
 );
 
 sub new {
     my $class = shift;
     my $o = {
 	## === edit these START ===
-	user	  => 'test',	# mysql user
+	dbuser	  => 'test',	# mysql user
 	password  => 'test',	# mysql password
 	database  => 'test',	# mysql database
 	base_cgi  => 'http://hawk.home.net/cgi-bin/shares',	# URL for CGI scripts
@@ -34,16 +35,13 @@ sub new {
 
 	## user/session data
 	db        => undef,	# Finance::Shares::MySQL for session
-	session	  => '',
-	srec	  => {},
-	urec	  => {},
-	cache	  => 'online',
-	width	  => 0,
+	user      => '',
+	userid    => 0,
+	ulevel    => 1,
+	hlevel    => 1,
+	cache	  => 'cache',
 	frames	  => 0,
 	css	  => 0,
-	layers	  => 0,
-	dhtml	  => 0,		# not used at present
-	ok        => 0,		# expirable sessions i.e. database has been created
 
 	## drawing charts
 	options   => {},	# all user options (for testing)
@@ -62,147 +60,76 @@ sub new {
     return $o;
 }
 
-sub width {
-    my $o = shift;
-    if ((not $o->{width}) or $o->{width} > 500) {
-	$o->{width} = 500;
-    } else {
-	$o->{width} = '95%';
-    }
-}
-
-sub params {
-    my $o = shift;
-    $o->{width}  = param('width')  || 0;
-    $o->{frames} = param('frames') || 0;
-    $o->{css}    = param('css')    || 0;
-    $o->{layers} = param('layers') || 0;
-    $o->{dhtml}  = param('dhtml')  || 0;
-    $o->width();
-}
-
-sub settings {
-    my $o = shift;
-    # these may be read directly
-    $o->{session}   = $o->{srec}{session};
-    $o->{cache}     = $o->{srec}{cache};
-    $o->{width}     = $o->{srec}{bwidth};
-    $o->{frames}    = $o->{srec}{frames};
-    $o->{css}       = $o->{srec}{css};
-    $o->{layers}    = $o->{srec}{layers};
-    $o->{dhtml}     = $o->{srec}{dhtml};
-    $o->{userlevel} = $o->{urec}{userlevel};
-    $o->{helplevel} = $o->{urec}{helplevel};
-    $o->{userid}    = $o->{urec}{userid};
-    $o->width();
-}
-
 sub login {
     my $o = shift;
     $o->{db} = new Finance::Shares::MySQL(
-	user     => $o->{user},
+	user     => $o->{dbuser},
 	password => $o->{password},
 	database => $o->{database},
     ) unless defined $o->{db};
     croak 'No database connection' unless $o->{db};
-    $o->{ok} = $o->expire_sessions();
     return $o->{db};
 }
 
 sub get_records {
-    my ($o, $init) = @_;
+    my $o = shift;
+    my $user = param('u') || '';
+    die "No user\n" unless $user;
     my $db = $o->login();
-    return $db if $init and param($init);
-    $o->{session} = param('s');
-    if ($o->{session}) {
+    my $h;
+    
+    foreach my $i (0 .. 1) {
 	eval {
-	    $o->{srec} = $db->select_hash('Login::Sessions', 'where session = ?', $o->{session});
-	    $o->{urec} = $db->select_hash('Login::Users', 'where userid = ?', $o->{srec}{userid});
-	    $o->settings();
+	    $h = $db->select_hash('Login::Users', 'where user = ?', $user);
 	};
-	if ($o->{ok} and $@) {
-	    my $html;
-	    ($html = <<end_html) =~ s/^\s+//gm;
-	    <p>Your user data is incorrect or missing, probably due to a software problem.</p>
-	    <p>Try to <a href='$o->{base_cgi}/register.pl'>re-register using a different login.</a> again.
-	    If that fails, please report the problem to $o->{webmaster}</p>    
-end_html
-	    $o->print_header('Data Error', $html);
-	    $o->print_footer();
-	    croak $@;
+	if ($@) {
+	    warn $@;
 	}
-    }
-    if ($o->{ok}) {
-	if ($o->{session}) {
-	    $o->ensure_raw_data($o->{srec}{userid});
+	if ($h->{user}) {
+	    last;
 	} else {
-	    my $html;
-	    ($html = <<end_html) =~ s/^\s+//gm;
-	    <p>Your session has expired or has been lost.  Please <a href='$o->{base_cgi}/login.pl'
-	    target='_top'>log in</a> again.  If that fails, please report the problem to <a
-	    href='mailto:$o->{webmaster}'>$o->{webmaster}</a>.</p>    
-end_html
-	    $o->print_header('No Session', $html);
-	    $o->print_footer();
-	    warn "No session id";
-	    exit;
+	    $o->change_user( user => $user );
 	}
     }
-	    
+    die "Cannot record data for '$user'\n" unless $h->{user};
+    
+    $o->{user}   = $h->{user};
+    $o->{userid} = $h->{userid};
+    $o->{ulevel} = $h->{ulevel};
+    $o->{hlevel} = $h->{hlevel};
+    $o->{admin}  = $h->{admin};
+    $o->{cache}  = $h->{cache};
+    $o->{frames} = $h->{frames};
+    $o->{css}    = $h->{css};
+
+    foreach my $h (@raw_data) {
+	$h->{shown} = 0;
+	$h->{userid} = $o->{userid};
+	$db->replace('Function::Options', %$h);
+    }
     return $db;
 }
 
 sub change_user {
     my $o = shift;
-    my %hash = (%{$o->{urec}}, @_);
+    my %hash = (
+	user   => $o->{user},
+	userid => $o->{userid},
+	ulevel => $o->{ulevel},
+	hlevel => $o->{hlevel},
+	admin  => $o->{admin},
+	cache  => $o->{cache},
+	frames => $o->{frames},
+	css    => $o->{css},
+	, @_);
     $o->{db}->replace('Login::Users', %hash );
-}
-
-sub change_session {
-    my $o = shift;
-    my %hash = (%{$o->{srec}}, @_);
-    $o->{db}->replace('Login::Sessions', %hash );
-}
-
-sub expire_sessions {
-    my $o = shift;
-    my ($d, $m, $y) = (localtime)[3 .. 5];
-    my $todaystr = sprintf('%04d-%02d-%02d', $y+1900, $m+1, $d);
-    my $db = $o->{db};
-    my $root = $db->root();
-    my $expired = 0;
-    eval {
-	my $table = $db->table('Login::Sessions');
-	$expired = $db->sql_select(qq(sqlname from $root where username = ' expired'));
-    };
-    return 0 if ($@);
-    if(!$expired) {
-	$db->sql_replace($root, username => ' expired', sqlname => $todaystr);
-    } elsif ($expired lt $todaystr) {
-	my $table = $db->table('Login::Sessions');
-	my @res = $db->sql_select(qq(session from $table where ts < date_sub(now(), interval '18:00' hour_minute) ));
-	my @values = map { $_ = $_->[0] } @res;
-	eval {
-	    my $sth = $db->{dbh}->prepare(qq(delete from $table where session = ?));
-	    my $n = 0;
-	    if ($sth) {
-		foreach my $s (@values) {
-		    $n += $sth->execute($s);
-		}
-		#warn "$n sessions expired";
-	    }
-	    $db->sql_replace($root, username => ' expired', sqlname => $todaystr);
-	};
-	warn $@ if ($@);
-    }
-    return 1;
 }
 
 sub print_header {
     my $o = shift;
     my ($title, $text, $script, $style) = @_;
     my @scripthash = ( -script => {-language => 'javascript', -code => $script} ) if $script;
-    my $stylesheet = $o->{dhtml} ? "$o->{base_url}/dhtml.css" : "$o->{base_url}/css.css";
+    my $stylesheet = "$o->{base_url}/styles.css";
     my @stylehash = ( -style => ($style ? $style : {src => $stylesheet}) );
 
     my $program = '';
@@ -217,7 +144,7 @@ sub print_header {
 		       -bgcolor => $o->{bgcolor}, -background => "!bgnd.jpg",
 		       @stylehash, @scripthash );
     if (defined $text) {
-	print start_table ({-width  => $o->{width}, -align => 'center',
+	print start_table ({-width  => '500', -align => 'center',
 			    -border => 0, -cellspacing => 20, -cellpadding => 8});
 	
 	my $headings;
@@ -258,6 +185,25 @@ sub print_footer {
     print end_html ();
 }
 
+sub show_error {
+    my ($o, $error) = @_;
+    $error = '' unless defined $error;
+    my $html;
+    ($html = <<end_html) =~ s/^\s+//gm;
+    <p>There is a problem $error<br>You could try:</p>
+    <ul>
+    <li>Logging in again before trying the same thing.</li>
+    <li>Choose alternative settings.</li>
+    <li>Try <a href='$o->{base_cgi}/menu.pl?s=$o->{session};t=!cache;a=offline' target='menu'>Work offline</a> from the menu.</li>
+    <li>Use the scripting interface; it is likely to be more reliable.</li>
+    <li>Report the problem to <a href='mailto:$o->{webmaster}'>$o->{webmaster}</a>.</li>
+    </ul>
+end_html
+    $o->print_header('Error', $html);
+    $o->print_footer();
+    exit;
+}
+
 sub show_params {
     my ($o, $table) = @_;
     $table = 1 unless defined $table;
@@ -294,28 +240,10 @@ sub show_records {
     while( my($k, $v) = each( %$o )) {
 	push @res, defined($v) ? "obj:$k='$v'" : "$k undefined";
     }
-    while( my($k, $v) = each( %{$o->{urec}} )) {
-	push @res, defined($v) ? "usr:$k='$v'" : "$k undefined";
-    }
-    while( my($k, $v) = each( %{$o->{srec}} )) {
-	push @res, defined($v) ? "ssn:$k='$v'" : "$k undefined";
-    }
     print join('<br>', @res), '<br>';
     warn join(', ', @res) if @res and $table == 2;
     print "</td></tr>\n" if $table == 1;
 }
 
-sub ensure_raw_data {
-    my ($o, $userid) = @_;
-    my $db = $o->{db};
-
-    foreach my $h (@raw_data) {
-	$h->{shown} = 0;
-	$h->{userid} = $userid;
-	$db->replace('Function::Options', %$h);
-    }
-}
-
 1;
-
 

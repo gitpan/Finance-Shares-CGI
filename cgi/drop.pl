@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $VERSION = 0.02;
+# drop.pl version 0.03;
 use strict;
 use warnings;
 use Pod::Usage;
@@ -7,10 +7,17 @@ use CGI::Carp('fatalsToBrowser');
 use CGI::Pretty qw(:standard *table -no_undef_params escapeHTML);
 $CGI::Pretty::INDENT = '    ';
 use DBIx::Namespace	 0.03;
-use Finance::Shares::CGI 0.03;
+use Finance::Shares::CGI 0.11;
 
+my $db;
 my $w = new Finance::Shares::CGI;
-my $db = $w->get_records();
+if (param 'u') {
+    $db = $w->get_records();
+} else {
+    $w->show_error('No user parameter');
+    exit;
+}
+
 my $table = param('t');
 my $choice = param('choice');
 my $title = 'Drop table';
@@ -20,7 +27,7 @@ unless ($choice) {
     print p('Which table do you want to remove?');
     print textfield(-name => 't');
     print submit(-name => 'choice', -value => 'Ok');
-    print hidden(-name => 's', -value => $w->{session});
+    print hidden(-name => 'u', -value => $w->{user});
     $w->print_form_end();
     $w->print_footer();
     exit;
