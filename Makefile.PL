@@ -1,7 +1,7 @@
 use ExtUtils::MakeMaker;
 WriteMakefile(
     NAME	=> 'Finance::Shares::CGI',
-    VERSION	=> '0.06',
+    VERSION	=> '0.07',
     ABSTRACT_FROM => 'CGI.pod',
     AUTHOR      => 'Christopher Willmot <chris@willmot.org.uk>',
     PREREQ_PM	=> {
@@ -23,6 +23,6 @@ WriteMakefile(
 	'CGI.pm' => '$(INST_LIBDIR)/CGI.pm',
     },
     MAN3PODS => {
-	'CGI.pod' => '$(INST_LIBDIR)/CGI.pod',
+	'CGI.pod' => '$(INST_MAN3DIR)/Finance::Shares::CGI.3pm',
     },
 );

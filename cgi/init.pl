@@ -72,7 +72,7 @@ my $layout_fields = [qw(field posn width levels conditions heading validation
 
 =head1 NAME
 
-sql_init - setup mysql tables for Finance::Shares web interface
+init.pl - setup mysql tables for Finance::Shares web interface
 
 =head1 SYNOPSIS
 
