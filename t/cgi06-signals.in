@@ -1,0 +1,300 @@
+$name = 'signal2';
+$c->{userlevel} = 3;
+$c->{multiple} = {
+  'Test' => {
+    'signals' => {
+      'signal-buy' => [
+        'buy'
+      ],
+      'signal-sell' => [
+        'sell'
+      ]
+    }
+  },
+  'Model' => {
+    'samples' => {
+      'signal2' => [
+        'ulvr1'
+      ]
+    },
+    'functions' => {
+      'signal2' => []
+    },
+    'tests' => {
+      'signal2' => [
+        'signal-buy',
+        'signal-sell'
+      ]
+    }
+  }
+};
+$c->{options} = {
+  'models' => {
+    'signal2' => {
+      'samples' => undef,
+      'functions' => undef,
+      'chart' => 'signal1',
+      'tests' => undef,
+      'userid' => '-1',
+      'name' => 'signal2'
+    }
+  },
+  'files' => {
+    'landscape' => {
+      'width' => undef,
+      'mright' => undef,
+      'page' => undef,
+      'errors' => undef,
+      'userid' => '-1',
+      'mleft' => undef,
+      'mbottom' => undef,
+      'page_order' => undef,
+      'reencode' => undef,
+      'strip' => undef,
+      'debug' => undef,
+      'mtop' => undef,
+      'paper' => undef,
+      'version' => undef,
+      'name' => 'landscape',
+      'eps' => undef,
+      'height' => undef,
+      'headings' => undef,
+      'clipping' => undef,
+      'title' => undef,
+      'landscape' => '1'
+    }
+  },
+  'styles' => {
+    'greens' => {
+      'width' => undef,
+      'sequence' => 'greens',
+      'userid' => '-1',
+      'same' => '1',
+      'display' => '1',
+      'color' => undef,
+      'lo_width' => undef,
+      'bi_color' => undef,
+      'li_dashes' => undef,
+      'pshape' => undef,
+      'lo_dashes' => undef,
+      'po_color' => undef,
+      'po_width' => undef,
+      'price_shape' => undef,
+      'bo_color' => undef,
+      'name' => 'greens',
+      'psize' => undef,
+      'lo_color' => undef,
+      'pi_color' => undef,
+      'bo_width' => undef,
+      'li_color' => undef,
+      'li_width' => '1.5'
+    }
+  },
+  'signals' => {
+    'sell' => {
+      'signal' => 'mark_sell',
+      'line_name' => 'Closing price',
+      'value' => undef,
+      'userid' => '-1',
+      'name' => 'sell',
+      'style' => undef,
+      'graph' => 'prices'
+    },
+    'buy' => {
+      'signal' => 'mark_buy',
+      'line_name' => 'Closing price',
+      'value' => undef,
+      'userid' => '-1',
+      'name' => 'buy',
+      'style' => undef,
+      'graph' => 'prices'
+    }
+  },
+  'samples' => {
+    'ulvr1' => {
+      'source' => 't/08-ulvr.csv',
+      'symbol' => 'ULVR.L',
+      'end_date' => '2002-08-31',
+      'dates_by' => 'days',
+      'userid' => '-1',
+      'name' => 'ulvr1',
+      'start_date' => '2002-06-01'
+    }
+  },
+  'graphs' => {
+    '15%' => {
+      'sequence' => undef,
+      'percent' => '15',
+      'userid' => '-1',
+      'bi_color' => undef,
+      'right_margin' => undef,
+      'pshape' => undef,
+      'top_margin' => undef,
+      'po_color' => undef,
+      'y_axis' => undef,
+      'po_width' => undef,
+      'bo_color' => undef,
+      'name' => '15%',
+      'pi_color' => undef,
+      'bo_width' => undef,
+      'show_dates' => undef,
+      'spacing' => undef
+    },
+    '50%' => {
+      'sequence' => undef,
+      'percent' => '50',
+      'userid' => '-1',
+      'bi_color' => undef,
+      'right_margin' => undef,
+      'pshape' => undef,
+      'top_margin' => undef,
+      'po_color' => undef,
+      'y_axis' => undef,
+      'po_width' => undef,
+      'bo_color' => undef,
+      'name' => '50%',
+      'pi_color' => undef,
+      'bo_width' => undef,
+      'show_dates' => undef,
+      'spacing' => undef
+    },
+    '25%' => {
+      'sequence' => undef,
+      'percent' => '25',
+      'userid' => '-1',
+      'bi_color' => undef,
+      'right_margin' => undef,
+      'pshape' => undef,
+      'top_margin' => undef,
+      'po_color' => undef,
+      'y_axis' => undef,
+      'po_width' => undef,
+      'bo_color' => undef,
+      'name' => '25%',
+      'pi_color' => undef,
+      'bo_width' => undef,
+      'show_dates' => undef,
+      'spacing' => undef
+    }
+  },
+  'functions' => {
+    'Closing price' => {
+      'shown' => '0',
+      'function' => 'close_x',
+      'volume' => undef,
+      'period' => undef,
+      'percent' => undef,
+      'userid' => '-1',
+      'name' => 'Closing price',
+      'style' => undef,
+      'strict' => '0',
+      'line_name' => undef,
+      'price' => undef,
+      'graph' => 'prices',
+      'edge' => undef
+    },
+    'weighted 21' => {
+      'shown' => '1',
+      'function' => 'weighted_a',
+      'volume' => undef,
+      'period' => '21',
+      'percent' => undef,
+      'userid' => '-1',
+      'name' => 'weighted 21',
+      'style' => 'greens',
+      'strict' => '0',
+      'line_name' => 'Closing price',
+      'price' => undef,
+      'graph' => undef,
+      'edge' => undef
+    },
+    'weighted 3' => {
+      'shown' => '1',
+      'function' => 'weighted_a',
+      'volume' => undef,
+      'period' => '3',
+      'percent' => undef,
+      'userid' => '-1',
+      'name' => 'weighted 3',
+      'style' => 'greens',
+      'strict' => '0',
+      'line_name' => 'Closing price',
+      'price' => undef,
+      'graph' => undef,
+      'edge' => undef
+    }
+  },
+  'tests' => {
+    'signal-buy' => {
+      'graph2' => undef,
+      'shown' => '1',
+      'test' => 'gt',
+      'ramp' => undef,
+      'userid' => '-1',
+      'name' => 'signal-buy',
+      'style' => 'greens',
+      'decay' => '0.9',
+      'signals' => 'buy',
+      'line1_name' => 'weighted 3',
+      'line2_name' => 'weighted 21',
+      'graph1' => undef,
+      'weight' => undef,
+      'graph' => 'signals'
+    },
+    'signal-sell' => {
+      'graph2' => undef,
+      'shown' => '1',
+      'test' => 'le',
+      'ramp' => undef,
+      'userid' => '-1',
+      'name' => 'signal-sell',
+      'style' => 'greens',
+      'decay' => '0.9',
+      'signals' => 'buy',
+      'line1_name' => 'weighted 3',
+      'line2_name' => 'weighted 21',
+      'graph1' => undef,
+      'weight' => undef,
+      'graph' => 'signals'
+    }
+  },
+  'charts' => {
+    'signal1' => {
+      'normal_font' => undef,
+      'key_panel' => undef,
+      'prices_pc' => undef,
+      'userid' => '-1',
+      'cycles' => undef,
+      'bgnd_outline' => '1',
+      'background' => undef,
+      'name' => 'signal1',
+      'heading' => undef,
+      'volumes_pc' => undef,
+      'file' => 'landscape',
+      'signals_pc' => undef,
+      'signals' => '25%',
+      'heading_font' => undef,
+      'volumes' => '15%',
+      'x_axis' => undef,
+      'cycles_pc' => undef,
+      'dots_per_inch' => undef,
+      'prices' => '50%'
+    }
+  },
+  'sequences' => {
+    'greens' => {
+      'width' => '0.5, 1, 3, 2',
+      'sequence' => 'green, dashes, shape, width, size',
+      'userid' => '-1',
+      'name' => 'greens',
+      'dashes' => '[], [9, 9], [3, 3], [9, 3], [3, 9], [9, 3, 3, 3]',
+      'size' => '2, 4, 6',
+      'green' => '0, 0.5, 0.25, 0.75, 1',
+      'color' => '[0.8,0.8,0], [0,0.5,0.5], [0.3,0,0.3], [0.9,0.3,0]',
+      'blue' => '0, 1, 0.5',
+      'gray' => '0.6, 0, 0.45, 0.15, 0.75, 0.3, 0.9',
+      'red' => '0.5, 1, 0',
+      'shape' => 'dot, cross, square, plus, diamond'
+    }
+  }
+};

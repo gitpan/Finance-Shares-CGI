@@ -1,0 +1,3 @@
+#!/usr/bin/perl -pi
+s{^Content-Type: application/postscript}{};
+s/\r\n//;

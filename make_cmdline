@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+our $VERSION = 0.01;
+use strict;
+use warnings;
+use DBIx::Namespace 0.03;
+
+my $db = new DBIx::Namespace(
+	user     => 'test',
+	password => 'test',
+	database => 'test',
+    );
+
+$db->replace('Login::Users',
+    login => 'cmdline',
+    userid => -1,
+    pwd => '375aecfe090dc277b387f026d5920ab3',
+    hint => 'cmdL193',
+    userlevel => 3,
+    helplevel => 1,
+);
+
+$db->replace('Login::Sessions',
+    session => 'cmdline',
+    frames => 1,
+    css => 1,
+    userid => -1,
+    cache => 'offline',
+);
+
+print "Session 'cmdline' created for user='cmdline', pwd='cmdL193' (userid=-1)\n";
+

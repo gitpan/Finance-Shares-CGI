@@ -1,0 +1,27 @@
+$name = 'basic1';
+$c->{userlevel} = '1';
+$c->{options} = {
+  'samples' => {
+    'ulvr1' => {
+      'source' => 't/08-ulvr.csv',
+      'symbol' => 'ULVR.L',
+      'end_date' => '2002-08-31',
+      'dates_by' => 'days',
+      'userid' => '-1',
+      'name' => 'ulvr1',
+      'start_date' => '2002-06-01'
+    }
+  },
+  'chosen_fns' => {
+    'basic1' => {}
+  },
+  'draws' => {
+    'basic1' => {
+      'functions' => undef,
+      'chart' => undef,
+      'userid' => '-1',
+      'name' => 'basic1',
+      'sample' => 'ulvr1'
+    }
+  }
+};

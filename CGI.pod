@@ -1,0 +1,217 @@
+=head1 NAME Finance::Shares::CGI - support for Finance::Shares cgi interface scripts
+
+=head1 SYNOPSIS
+
+=head2 The perl module
+
+    use Finance::Shares::CGI;
+
+    my $cgi = new Finance::Shares::CGI;
+    my $db  = $cgi->get_records( param('s') );
+
+    $cgi->print_header($title, $text, $script, $style);
+    $cgi->print_form_start($url, $code, $centered);
+    $cgi->print_form_end();
+    $cgi->print_footer($text);
+
+    $cgi->show_params();
+    $cgi->show_hash($hashref);
+    $cgi->show_records();
+
+=head2 Administration scripts
+
+    init.pl
+    fetch.pl
+    list.pl
+    drop.pl
+
+=head2 User registration scripts
+
+    register.pl
+    email.pl
+    password.pl
+    login.pl
+    logout.pl
+
+=head2 Main processing scripts
+
+    browser.pl
+    chart.pl
+    interface.pl
+    menu.pl
+    options.pl
+    prefs.pl
+    run.pl
+
+=head2 Support scripts
+
+    make_cmdline
+    make_index
+    strip_cgi
+
+=head1 DESCRIPTION
+
+The Finance::Shares::CGI module supports a number of cgi scripts which provide a web interface to the
+Finance::Shares toolkit.  It requires a mysql database.  See L<Finance::Shares::Overview> or
+L<Finance::Shares::MySQL> for details on setting this up.
+
+The scripts must be manually copied to your CGI directory.  See the README file for installation details.  This
+documents how the scripts work together.
+
+=head2 Administration scripts
+
+These scripts are only available to an admin user.
+
+=over 4
+
+=item init.pl
+
+Builds the mysql database.
+Mysql must have a user, password and database to match those set in MarketMonkey.pm.  Documentation is
+available using
+
+    $ perldoc init.pl
+
+Note that tables, users or sessions arguments all destroy user data.
+
+=item fetch.pl
+
+Fetches stock quotes into the mysql database.  Remember the command line scripts F<fs_fetch> and F<fs_fetch_csv>
+can be found in the Finance::Shares package.
+
+=item list.pl
+
+Lists the mysql table names against the DBIx::Namespace user names.  Remember F<fs_list_tables> in
+Finance::Shares.
+    
+=item drop.pl
+
+Small changes to the tables can be made from the mysql prompt.  DON'T just delete tables, though, as
+this destroys the index integrity.  It only deletes one user-name at a time. Use list.pl to identify
+them.  This does the same job as F<fs_drop_table> from the Finance::Shares package.
+
+=back
+
+=head2 User registration scripts
+
+I realise this is a bit heavy handed for a demo, but I haven't got around to taking it out yet.
+
+=over 4
+
+=item register.pl
+
+Starts registration process for new user.  Emails a link to password.pl
+
+=item email.pl
+
+Emails user name and password hint to user.
+
+=item password.pl
+
+Completes registration.
+
+=item login.pl
+
+Checks for user id and starts a session.
+
+=item logout.pl
+
+Ends a session.  Sessions may also expire; logging in is required daily.
+
+=back
+
+=head2 Main processing scripts
+
+These are the scripts which serve the site's main purpose, to make the hundreds of options more manageable.
+
+=over 4
+
+=item options.pl
+
+Top of site, this generates the frameset holding menu and content frames.
+
+=item menu.pl
+
+Generates the menu according to session browser settings
+
+=item interface.pl
+
+The main script, driven by params 't' (table name), 'a' (arguments) and 'name' (of user settings) which determine
+the layout described in the init.pl tables.
+
+=item browser.pl
+
+User override of browser settings.  There is support for dhtml but it is currently disabled.  (It wasn't worth the
+bother.)
+
+=item prefs.pl
+
+Help and option levels for user.  There are three user levels, mostly done, but the three help levels are all the
+same at present.
+
+=item chart.pl
+
+Generates PostScript chart from 'Draw chart' settings.
+
+=item run.pl
+
+Runs a model and returns a chart with the results.
+
+=back
+
+=head2 Support scripts
+
+=over 4
+
+=item make_cmdline
+
+This creates a user called 'cmdline' with the password 'cmdL193'.  It also creates a session with id
+'cmdline' - a lot easier to type than a 32 character digest.  This needs to be given each day as the session
+expires, but it does make command line testing possible.
+
+You will probably want to copy the F<strip_cgi> script to your cgi directory before issuing manual commands like:
+
+    run.pl 's=cmdline' 'name=model1' | strip_cgi > outfile.ps
+
+The first time you try this there will probably be a write error, because run.pl and chart.pl write a file F<vars>
+which is probably not owned by you.  Delete it and try again.
+
+This F<vars> file can be used as a basis for manual tests.  I find it simplest to get test data from CSV files, so
+a C<source> line needs manually adding to each sample:
+
+  'samples' => {
+    'ulvr1' => {
+      'source' => 't/08-ulvr.csv',	# Added manually
+      'symbol' => 'ULVR.L',
+      'end_date' => '2002-08-31',
+      'dates_by' => 'days',
+      'userid' => '-1',
+      'name' => 'ulvr1',
+      'start_date' => '2002-06-01'
+    }
+  },
+
+Occasionally a C<1;> needs adding on the end as the file is read by C<do>.  If the changed F<vars> file is now saved
+as F<test1.txt>, the following command should produce the same result:
+
+    run.pl 'test_in=test1.txt' | strip_cgi > outfile.ps
+
+The main difference is that this test mode avoids any mysql accesses, so can be used for installation tests before
+the database is set up.
+
+=item make_index
+
+Constructs the file F<index.html> using the same settings as all the cgi scripts.
+
+=item strip_cgi
+
+A filter converting script output to a viewable (PostScript or HTML) file.
+
+The HTML written to STDOUT by the scripts have a CGI header prepended.  Piping the output through strip_cgi
+produces a file which can be saved and viewed with a postscript viewer such as gv or KGhostView.
+
+=back
+
+=cut
+
+

@@ -1,0 +1,156 @@
+#!/usr/bin/perl
+our $VERSION = 0.03;
+use strict;
+use warnings;
+use CGI::Carp('fatalsToBrowser');
+use CGI::Pretty qw(:standard *table -no_undef_params);
+$CGI::Pretty::INDENT = '    ';
+use Finance::Shares::CGI 0.03;
+
+my $w = new Finance::Shares::CGI;
+$w->width();
+my $file = "$w->{base_dir}/index.html";
+open OUTFILE, '>', $file or die $!;
+select OUTFILE;
+
+my $form_start = start_form(-action => "$w->{base_cgi}/login.pl");
+my $enter = submit(-name => 'choice', -value => 'Enter');
+my $form_end = end_form();
+my $intro;
+($intro = <<end_intro) =~ s/^\s+//gm;
+    <p class='centered'>A user interface to the Finance::Shares modules, producing printable charts of share
+    quotes along with functions and test results.</p>
+    <p class='centered'>An internet connection is required although an
+    offline mode allows for analysing previously fetched quotes.</p>
+    $form_start
+    <p class = 'centered'>$enter</p>
+    $form_end
+    <p align='center'>Although this might give a taste of what the Finance::Shares modules are about, they were intended to be
+    used as a scripting toolbox comprising the following.  See their man pages for further details.</p>
+end_intro
+$w->print_header(undef,$intro);
+
+my $html;
+($html = <<end_html) =~ s/^\s+//gm;
+    <table bgcolor='$w->{bgcolor}' width='90%' align='center' border='3' cellpadding='8'>
+    <tr>
+	<td>
+	    Finance::Shares::Overview
+	</td>
+	<td>
+	    An introduction, tutorial and setup details.  Read this first.
+	</td>
+    </tr>
+    <tr>
+	<td>
+	    Finance::Shares::Lesson1 etc.
+	</td>
+	<td>
+	    Tutorial lessons on how to use the modules.
+	</td>
+    </tr>
+    <tr>
+	<td>
+	    Finance::Shares::Model
+	</td>
+	<td>
+	    This is one of the top level modules.  It applies tests to various samples, adding 'buy' and 'sell'
+	    signals to the charts.
+	</td>
+    </tr>
+    <tr>
+	<td>
+	    Finance::Shares::Portfolio
+	</td>
+	<td>
+	    Another top level module.  This uses the Model's buy/sell signals to maintain stock positions.  <i>Not
+	    implemented yet.</i>
+	</td>
+    </tr>
+    <tr>
+	<td>
+	    Finance::Shares::CGI
+	</td>
+	<td>
+	    The 'input' module, this supports the CGI scripts used in this site.  Unlike the other modules, it
+	    needs manual installation.  Scripts need to be copied into the cgi-bin directory and a suitable mysql
+	    database must be set up before it can work.
+	</td>
+    </tr>
+    <tr>
+	<td>
+	    Finance::Shares::Chart
+	</td>
+	<td>
+	    The 'output' module, this turns the data held within a Sample into a PostScript file for printing or
+	    viewing with GhostView.
+	</td>
+    </tr>
+    <tr>
+	<td>
+	    Finance::Shares::MySQL
+	</td>
+	<td>
+	    This interfaces with the mysql database used for storing quotes and handles the internet access which
+	    fetches them.
+	</td>
+    </tr>
+    <tr>
+	<td>
+	    Finance::Shares::Sample
+	</td>
+	<td>
+	    The main object holding share quotes as well as function and test results.  Most of the other modules
+	    make direct use of this data.
+	</td>
+    </tr>
+    <tr>
+	<td>
+	    Finance::Shares::Averages
+	</td>
+	<td>
+	    A collection of functions providing moving averages.
+	</td>
+    </tr>
+    <tr>
+	<td>
+	    Finance::Shares::Bands
+	</td>
+	<td>
+	    A collection of functions adding lines above and below other functions.
+	</td>
+    </tr>
+    <tr>
+	<td>
+	    Finance::Shares::Momentum
+	</td>
+	<td>
+	    Functions for identifying over-bought and over-sold conditions.  <i>Not implemented yet.</i>
+	</td>
+    </tr>
+    <tr>
+	<td>
+	    Finance::Shares::Oscillators
+	</td>
+	<td>
+	    Functions attempting to identify cycles.  <i>Not implemented yet.</i>
+	</td>
+    </tr>
+    <tr>
+	<td>
+	    Finance::Shares::Trends
+	</td>
+	<td>
+	    This gives an indication of rising and falling trends.
+	</td>
+    </tr>
+    </table>
+end_html
+print $html;
+ 
+$w->print_form_end();
+$w->print_footer();
+
+select STDOUT;
+print "$file created\n";
+

@@ -1,0 +1,353 @@
+$name = 'test2';
+$c->{userlevel} = 3;
+$c->{options} = {
+  'files' => {
+    'landscape' => {
+      'width' => undef,
+      'mright' => undef,
+      'page' => undef,
+      'errors' => undef,
+      'userid' => '-1',
+      'mleft' => undef,
+      'mbottom' => undef,
+      'page_order' => undef,
+      'reencode' => undef,
+      'strip' => undef,
+      'debug' => undef,
+      'mtop' => undef,
+      'paper' => undef,
+      'version' => undef,
+      'name' => 'landscape',
+      'eps' => undef,
+      'height' => undef,
+      'headings' => undef,
+      'clipping' => undef,
+      'title' => undef,
+      'landscape' => '1'
+    }
+  },
+  'styles' => {
+    'squares' => {
+      'width' => undef,
+      'sequence' => 'colours',
+      'userid' => '-1',
+      'same' => '1',
+      'display' => '3',
+      'color' => undef,
+      'lo_width' => undef,
+      'bi_color' => undef,
+      'li_dashes' => undef,
+      'pshape' => 'square',
+      'lo_dashes' => undef,
+      'po_color' => '0',
+      'po_width' => '1',
+      'price_shape' => undef,
+      'bo_color' => undef,
+      'name' => 'squares',
+      'psize' => '6',
+      'lo_color' => undef,
+      'pi_color' => '1,1,0',
+      'bo_width' => undef,
+      'li_color' => undef,
+      'li_width' => '2'
+    },
+    'red' => {
+      'width' => '1.5',
+      'sequence' => undef,
+      'userid' => '-1',
+      'same' => '1',
+      'display' => '3',
+      'color' => '1,0,0',
+      'lo_width' => undef,
+      'bi_color' => undef,
+      'li_dashes' => undef,
+      'pshape' => undef,
+      'lo_dashes' => undef,
+      'po_color' => undef,
+      'po_width' => undef,
+      'price_shape' => undef,
+      'bo_color' => undef,
+      'name' => 'red',
+      'psize' => '4',
+      'lo_color' => undef,
+      'pi_color' => undef,
+      'bo_width' => undef,
+      'li_color' => undef,
+      'li_width' => undef
+    }
+  },
+  'draws' => {
+    'test2' => {
+      'functions' => undef,
+      'chart' => 'test2',
+      'userid' => '-1',
+      'name' => 'test2',
+      'sample' => 'ulvr1'
+    }
+  },
+  'axes' => {
+    'y_axis' => {
+      'heavy_color' => '0,0,0.8',
+      'show_day' => undef,
+      'mid_color' => '0.2,0.4,0.8',
+      'light_width' => undef,
+      'light_color' => '0.5,0.7,1',
+      'userid' => '-1',
+      'background' => undef,
+      'name' => 'y_axis',
+      'show_weekday' => undef,
+      'smallest' => undef,
+      'show_lines' => undef,
+      'changes_only' => undef,
+      'show_year' => undef,
+      'label_gap' => undef,
+      'mark_min' => undef,
+      'mark_max' => undef,
+      'title' => undef,
+      'mid_width' => undef,
+      'si_shift' => undef,
+      'show_month' => undef,
+      'heavy_width' => undef
+    },
+    'dates' => {
+      'heavy_color' => undef,
+      'show_day' => '1',
+      'mid_color' => undef,
+      'light_width' => undef,
+      'light_color' => undef,
+      'userid' => '-1',
+      'background' => undef,
+      'name' => 'dates',
+      'show_weekday' => '1',
+      'smallest' => undef,
+      'show_lines' => '0',
+      'changes_only' => '0',
+      'show_year' => '1',
+      'label_gap' => undef,
+      'mark_min' => undef,
+      'mark_max' => undef,
+      'title' => undef,
+      'mid_width' => undef,
+      'si_shift' => undef,
+      'show_month' => '1',
+      'heavy_width' => undef
+    }
+  },
+  'fonts' => {
+    'normal' => {
+      'color' => '0.2,0,0.7',
+      'userid' => '-1',
+      'name' => 'normal',
+      'font' => 'Courier',
+      'size' => '10'
+    },
+    'heading' => {
+      'color' => '0.8,0,0.3',
+      'userid' => '-1',
+      'name' => 'heading',
+      'font' => 'Times-Roman',
+      'size' => '16'
+    }
+  },
+  'samples' => {
+    'ulvr1' => {
+      'source' => 't/08-ulvr.csv',
+      'symbol' => 'ULVR.L',
+      'end_date' => '2002-03-31',
+      'dates_by' => 'days',
+      'userid' => '-1',
+      'name' => 'ulvr1',
+      'start_date' => '2002-01-01'
+    }
+  },
+  'functions' => {
+    'Highest price' => {
+      'shown' => '0',
+      'function' => 'high_x',
+      'volume' => undef,
+      'period' => undef,
+      'percent' => undef,
+      'userid' => '-1',
+      'name' => 'Highest price',
+      'style' => undef,
+      'strict' => '0',
+      'line_name' => undef,
+      'price' => undef,
+      'graph' => 'prices',
+      'edge' => undef
+    },
+    'simple 3' => {
+      'shown' => '1',
+      'function' => 'simple_a',
+      'volume' => undef,
+      'period' => '3',
+      'percent' => undef,
+      'userid' => '-1',
+      'name' => 'simple 3',
+      'style' => 'squares',
+      'strict' => '0',
+      'line_name' => 'Highest price',
+      'price' => undef,
+      'graph' => 'prices',
+      'edge' => undef,
+      'line' => 'simple(3,high)'
+    },
+    'simple 21' => {
+      'shown' => '1',
+      'function' => 'simple_a',
+      'volume' => undef,
+      'period' => '21',
+      'percent' => undef,
+      'userid' => '-1',
+      'name' => 'simple 21',
+      'style' => 'red',
+      'strict' => '0',
+      'line_name' => 'Volume',
+      'price' => undef,
+      'graph' => 'volumes',
+      'edge' => undef,
+      'line' => 'simple(21,volume)'
+    },
+    'Volume' => {
+      'shown' => '0',
+      'function' => 'volume_y',
+      'volume' => undef,
+      'period' => undef,
+      'percent' => undef,
+      'userid' => '-1',
+      'name' => 'Volume',
+      'style' => undef,
+      'strict' => '0',
+      'line_name' => undef,
+      'price' => undef,
+      'graph' => 'volumes',
+      'edge' => undef
+    }
+  },
+  'graphs' => {
+    'prices1' => {
+      'sequence' => 'reds',
+      'percent' => '50',
+      'userid' => '-1',
+      'bi_color' => undef,
+      'right_margin' => undef,
+      'pshape' => undef,
+      'top_margin' => undef,
+      'po_color' => undef,
+      'y_axis' => 'y_axis',
+      'po_width' => undef,
+      'bo_color' => undef,
+      'name' => 'prices1',
+      'pi_color' => undef,
+      'bo_width' => undef,
+      'show_dates' => '1',
+      'spacing' => undef
+    }
+  },
+  'kpanels' => {
+    'test3' => {
+      'text_width' => '75',
+      'horz_spacing' => undef,
+      'userid' => '-1',
+      'name' => 'test3',
+      'background' => '0.9,1,1',
+      'glyph_ratio' => '0.6',
+      'icon_height' => undef,
+      'icon_width' => undef,
+      'vert_spacing' => undef,
+      'outline_width' => '2',
+      'outline_color' => '0,0,1',
+      'text_font' => 'normal',
+      'title' => 'Whatever',
+      'title_font' => 'heading',
+      'spacing' => undef
+    }
+  },
+  'chosen_fns' => {
+    'test2' => {
+      'simple 3' => {
+        'shown' => '1',
+        'period' => '3',
+        'volume' => undef,
+        'function' => 'simple_a',
+        'userid' => '-1',
+        'percent' => undef,
+        'style' => 'squares',
+        'name' => 'simple 3',
+        'strict' => '0',
+        'line_name' => 'Highest price',
+        'price' => undef,
+        'edge' => undef,
+        'graph' => undef
+      },
+      'simple 21' => {
+        'shown' => '1',
+        'period' => '21',
+        'volume' => undef,
+        'function' => 'simple_a',
+        'userid' => '-1',
+        'percent' => undef,
+        'style' => 'red',
+        'name' => 'simple 21',
+        'strict' => '0',
+        'line_name' => 'Volume',
+        'price' => undef,
+        'edge' => undef,
+        'graph' => undef
+      }
+    }
+  },
+  'charts' => {
+    'test2' => {
+      'normal_font' => 'normal',
+      'key_panel' => 'test3',
+      'prices_pc' => '66',
+      'userid' => '-1',
+      'cycles' => undef,
+      'bgnd_outline' => undef,
+      'background' => '1, 1, 0.9',
+      'name' => 'test2',
+      'heading' => 'Just Testing',
+      'volumes_pc' => '25',
+      'file' => 'landscape',
+      'signals_pc' => undef,
+      'signals' => undef,
+      'heading_font' => 'heading',
+      'volumes' => undef,
+      'x_axis' => 'dates',
+      'cycles_pc' => undef,
+      'dots_per_inch' => '72',
+      'prices' => 'prices1'
+    }
+  },
+  'sequences' => {
+    'colours' => {
+      'width' => '0.5, 1, 3, 2',
+      'sequence' => 'color, dashes, shape, width, size',
+      'userid' => '-1',
+      'name' => 'colours',
+      'dashes' => '[], [9, 9], [3, 3], [9, 3], [3, 9], [9, 3, 3, 3]',
+      'size' => '2, 4, 6',
+      'green' => '0, 0.5, 0.25, 0.75, 1',
+      'color' => '[0.8,0.8,0], [0,0.5,0.5], [0.3,0,0.3], [0.9,0.3,0]',
+      'blue' => '0, 1, 0.5',
+      'gray' => '0.6, 0, 0.45, 0.15, 0.75, 0.3, 0.9',
+      'red' => '0.5, 1, 0',
+      'shape' => 'dot, cross, square, plus, diamond'
+    },
+    'reds' => {
+      'width' => '0.5, 1, 3, 2',
+      'sequence' => 'red, dashes, shape, width, size',
+      'userid' => '-1',
+      'name' => 'reds',
+      'dashes' => '[], [9, 9], [3, 3], [9, 3], [3, 9], [9, 3, 3, 3]',
+      'size' => '2, 4, 6',
+      'green' => '0, 0.5, 0.25, 0.75, 1',
+      'color' => '[0.8,0.8,0], [0,0.5,0.5], [0.3,0,0.3], [0.9,0.3,0]',
+      'blue' => '0, 1, 0.5',
+      'gray' => '0.6, 0, 0.45, 0.15, 0.75, 0.3, 0.9',
+      'red' => '0.5, 1, 0',
+      'shape' => 'dot, cross, square, plus, diamond'
+    }
+  }
+};
