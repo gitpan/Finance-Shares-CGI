@@ -1,7 +1,7 @@
 use ExtUtils::MakeMaker;
 WriteMakefile(
     NAME	=> 'Finance::Shares::CGI',
-    VERSION	=> '0.04',
+    VERSION	=> '0.05',
     ABSTRACT	=> 'CGI Interface for Finance::Shares',
     AUTHOR      => 'Christopher Willmot <chris@willmot.org.uk>',
     PREREQ_PM	=> {

@@ -1,3 +1,5 @@
+
+
 =head1 NAME Finance::Shares::CGI - support for Finance::Shares cgi interface scripts
 
 =head1 SYNOPSIS

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-our $VERSION = 0.04;
+# $VERSION = 0.04;
 use strict;
 use warnings;
 use Carp;

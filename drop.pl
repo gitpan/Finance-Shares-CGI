@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-our $VERSION = 0.02;
+# $VERSION = 0.02;
 use strict;
 use warnings;
 use Pod::Usage;
